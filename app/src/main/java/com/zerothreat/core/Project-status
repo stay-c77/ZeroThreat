@@ -1,0 +1,86 @@
+last updated 3-4
+
+DATABASE STORAGE FIX - All URL Detections Now Properly Saved
+============================================================
+
+ISSUE IDENTIFIED:
+-----------------
+URLs detected from onClick, notification listener, and manual check were not being consistently saved to the database. Only specific cases (DNS failures and blocked URLs) were being recorded.
+
+ROOT CAUSE:
+-----------
+Missing database save calls after phishing detection analysis completed in all three detection modules.
+
+FILES FIXED:
+-----------
+1. SafeBrowserActivity.kt
+   - Location: /app/src/main/java/com/zerothreat/core/browser/SafeBrowserActivity.kt
+   - Added: Database save after PhishingDetector.analyzeDetailed() completes (line ~107)
+   - Now saves: All onClick URL scans (SAFE, SUSPICIOUS, PHISHING) to database
+
+2. NotificationListener.kt
+   - Location: /app/src/main/java/com/zerothreat/core/notifications/NotificationListener.kt
+   - Added: Database save after PhishingDetector.analyzeDetailed() completes (line ~148)
+   - Now saves: All notification URL scans (SAFE, SUSPICIOUS, PHISHING) to database
+
+3. ManualCheckViewModel.kt
+   - Location: /app/src/main/java/com/zerothreat/core/ui/manual/ManualCheckViewModel.kt
+   - Added: Database save after PhishingDetector.analyzeDetailed() completes (line ~105)
+   - Now saves: All manual check URL scans (SAFE, SUSPICIOUS, PHISHING) to database
+
+HOW IT WORKS NOW:
+-----------------
+✅ onClick Detection:
+   1. URL clicked in WhatsApp/Instagram/Gmail/SMS
+   2. SafeBrowserActivity intercepts the URL
+   3. DNS check performed (saves if failed)
+   4. Phishing detection performed
+   5. **Result saved to database** ← FIXED
+   6. Alert shown to user
+
+✅ Notification Listener:
+   1. Notification with URL received
+   2. NotificationListener extracts URL
+   3. DNS check performed (saves if failed)
+   4. Phishing detection performed
+   5. **Result saved to database** ← FIXED
+   6. Threat notification shown if suspicious/phishing
+
+✅ Manual Check:
+   1. User enters URL in app
+   2. DNS check performed (saves if failed)
+   3. Phishing detection performed
+   4. **Result saved to database** ← FIXED
+   5. Result shown to user
+
+DATABASE TABLES UPDATED:
+------------------------
+All detections now properly populate:
+- all_scanned_URLs (master table)
+- detected_as_safe_urls (safe URLs)
+- detected_as_suspicious_URLs (suspicious URLs)
+- detected_as_phishing_URLs (phishing URLs)
+- blocked_URLs (when user blocks a URL)
+
+WHAT WAS SAVED BEFORE:
+----------------------
+❌ onClick URLs: Only DNS failures and blocked URLs
+❌ Notification URLs: Only DNS failures
+❌ Manual Check URLs: Only DNS failures
+
+WHAT IS SAVED NOW:
+------------------
+✅ onClick URLs: ALL scans (SAFE, SUSPICIOUS, PHISHING)
+✅ Notification URLs: ALL scans (SAFE, SUSPICIOUS, PHISHING)
+✅ Manual Check URLs: ALL scans (SAFE, SUSPICIOUS, PHISHING)
+
+VERIFICATION:
+-------------
+After this fix, you should see:
+1. Database screen populates with all URL scans
+2. History shows complete scan records
+3. Statistics (total scans, threats detected) are accurate
+4. All three detection sources properly logged
+
+No code conflicts or errors detected.
+Build status: Ready for testing.

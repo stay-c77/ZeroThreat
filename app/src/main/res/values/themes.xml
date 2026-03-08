@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.ZeroThreatCore" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/zt_primary</item>
+        <item name="colorOnPrimary">@color/zt_on_primary</item>
+        <item name="colorSecondary">@color/zt_secondary</item>
+        <item name="colorOnSecondary">@color/zt_on_secondary</item>
+        <item name="colorSurface">@color/zt_surface</item>
+        <item name="colorOnSurface">@color/zt_on_surface</item>
+        <item name="android:windowBackground">@color/zt_background</item>
+        <item name="android:colorBackground">@color/zt_background</item>
+        <item name="materialCardViewStyle">@style/Widget.ZeroThreat.CardView</item>
+    </style>
+
+    <style name="Theme.ZeroThreatCore.Dialog" parent="Theme.Material3.Light.Dialog.Alert">
+        <item name="colorPrimary">@color/zt_primary</item>
+        <item name="colorSecondary">@color/zt_secondary</item>
+        <item name="colorSurface">@color/zt_surface</item>
+        <item name="colorOnSurface">@color/zt_on_surface</item>
+        <item name="android:buttonBarButtonStyle">@style/ZeroThreat.Dialog.Button</item>
+    </style>
+
+    <style name="Widget.ZeroThreat.CardView" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">@dimen/card_corner_radius</item>
+        <item name="cardElevation">@dimen/card_elevation</item>
+        <item name="cardBackgroundColor">@color/zt_surface</item>
+    </style>
+
+    <style name="ZeroThreat.Dialog.Button" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/zt_primary</item>
+    </style>
+</resources>

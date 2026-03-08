@@ -1,0 +1,701 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                    ZEROTHREAT - VISUAL WORKFLOW DIAGRAM                     ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                            COMPLETE WORKFLOW FLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         USER INSTALLS APP                                │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      MAINACTIVITY LAUNCHES                               │
+│  - Shows "Enable Link Protection" dialog                                │
+│  - Requests BROWSER ROLE permission                                     │
+│  - User grants permission                                               │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                  ZEROTHREAT IS DEFAULT BROWSER ✅                       │
+│  - Can intercept URL clicks                                             │
+│  - Can analyze before opening                                           │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           │
+        ┌──────────────────┴──────────────────┐
+        │                                     │
+        ▼                                     ▼
+┌──────────────────────┐          ┌──────────────────────┐
+│  DETECTION PATH A    │          │  DETECTION PATH B    │
+│  Notification        │          │  Direct Click        │
+│  Listener            │          │  Handler             │
+└──────────────────────┘          └──────────────────────┘
+        │                                     │
+        │                                     │
+        └──────────────────┬──────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                        URL ANALYSIS PIPELINE                             │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ STEP 1: DNS CHECK (DnsChecker.kt)                             │   │
+│  │ - Check if domain exists via InetAddress.getByName()         │   │
+│  └──┬─────────────────────────────────────────────────────────────┘   │
+│     │                                                                   │
+│     ├─ Domain NOT EXISTS → SUSPICIOUS (75%) → Show DNS Failure Dialog  │
+│     └─ Domain EXISTS → Continue to Step 2                               │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ STEP 2: BLACKLIST CHECK (BlacklistManager.kt)                 │   │
+│  │ - Load: assets/blacklists/phishtank.csv                      │   │
+│  │ - Check exact URL/domain match                                │   │
+│  └──┬─────────────────────────────────────────────────────────────┘   │
+│     │                                                                   │
+│     ├─ BLACKLISTED → PHISHING (100%) → Show Phishing Dialog           │
+│     └─ NOT BLACKLISTED → Continue to Step 3                            │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ STEP 3: USER ALLOWLIST (UserAllowlistManager.kt)              │   │
+│  │ - Check if user manually trusted this domain                  │   │
+│  └──┬─────────────────────────────────────────────────────────────┘   │
+│     │                                                                   │
+│     ├─ USER ALLOWLISTED → SAFE (0%) → Show Safe Dialog                │
+│     └─ NOT ALLOWLISTED → Continue to Step 4                            │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ STEP 4: WHITELIST CHECK (WhitelistManager.kt)                 │   │
+│  │ - Load: assets/whitelists/top-1m.csv                         │   │
+│  │ - Fallback: hardcodedBrands (35+ popular sites)              │   │
+│  │ - Check exact domain match                                    │   │
+│  └──┬─────────────────────────────────────────────────────────────┘   │
+│     │                                                                   │
+│     ├─ WHITELISTED → SAFE (0%) → Show Safe Dialog                     │
+│     └─ NOT WHITELISTED → Continue to Step 5                            │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ STEP 5: MULTI-FACTOR PHISHING DETECTION                       │   │
+│  │ (PhishingDetector.kt - analyzeDetailedInternal)               │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+│     │                                                                   │
+│     ├─ Check A: Brand Similarity (Typosquatting)                       │
+│     │   └─ gooogle vs google (distance=1) → +32 points                │
+│     │                                                                   │
+│     ├─ Check B: Whitelist Similarity                                   │
+│     │   └─ gooogle vs google (distance=1) → +35 points                │
+│     │                                                                   │
+│     ├─ Check C: Homograph Detection                                    │
+│     │   └─ Cyrillic/Greek lookalikes → +100 points                    │
+│     │                                                                   │
+│     ├─ Check D: Keyword Analysis                                       │
+│     │   └─ login, password, verify → +20-40 points                    │
+│     │                                                                   │
+│     ├─ Check E: Infrastructure                                         │
+│     │   └─ IP address, TLD, shortener → +15-50 points                 │
+│     │                                                                   │
+│     └─ Check F: Lexical Features                                       │
+│         └─ Length, dots, special chars → points                         │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ STEP 6: CALCULATE FINAL SCORE                                 │   │
+│  │ - Sum all points (0-100)                                      │   │
+│  │ - Count detection signals                                      │   │
+│  │ - Apply decision thresholds                                   │   │
+│  └──┬─────────────────────────────────────────────────────────────┘   │
+│     │                                                                   │
+│     ├─ Score ≥ 80 + 2+ signals → PHISHING                             │
+│     ├─ Score ≥ 10 → SUSPICIOUS                                         │
+│     └─ Score < 10 → SAFE                                               │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+        ┌──────────────────┴──────────────────┐
+        │                                     │
+        ▼                                     ▼
+┌──────────────────┐              ┌──────────────────────┐
+│   SAFE RESULT    │              │ THREAT RESULT        │
+│   (0-9 points)   │              │ (10-100 points)      │
+└────────┬─────────┘              └──────────┬───────────┘
+         │                                   │
+         ▼                                   ▼
+┌──────────────────────┐          ┌──────────────────────────┐
+│ Show "Scan Complete" │          │ Show "Threat Detected"   │
+│ Dialog               │          │ Dialog                   │
+│                      │          │                          │
+│ google.com           │          │ gooogle.com              │
+│ 100% Safe            │          │ 35% Suspicious           │
+│                      │          │ Typo of google           │
+│ [Continue] [Exit]    │          │                          │
+└────────┬─────────────┘          │ [Continue] [Block] [Exit]│
+         │                         └──────────┬───────────────┘
+         │                                    │
+         │                         ┌──────────┼──────────┐
+         │                         │          │          │
+         │                    Continue     Block      Exit
+         │                         │          │          │
+         └─────────────────────────┘          │          │
+                   │                          │          │
+                   │                          ▼          ▼
+                   │                    ┌─────────┐  ┌────────┐
+                   │                    │ Save to │  │ Close  │
+                   │                    │Database │  │  App   │
+                   │                    │(blocked)│  └────────┘
+                   │                    └─────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    SHOW BROWSER PICKER DIALOG                            │
+│                                                                          │
+│  "Select Browser"                                                       │
+│  "Which browser would you like to open this link with?"                │
+│                                                                          │
+│  ○ Chrome                                                               │
+│  ○ Firefox                                                              │
+│  ○ Samsung Internet                                                     │
+│  ○ Brave                                                                │
+│  ○ Opera                                                                │
+│                                                                          │
+│  [Cancel]                                                               │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+                  User Selects Browser
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    LAUNCH URL IN SELECTED BROWSER                        │
+│  - Opens URL in Chrome/Firefox/etc.                                    │
+│  - SafeBrowserActivity closes                                           │
+│  - Browser displays the website                                         │
+└──────────────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                        NOTIFICATION LISTENER WORKFLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│           USER RECEIVES NOTIFICATION (WhatsApp/Gmail/etc.)              │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                   NotificationListener.onNotificationPosted()            │
+│  - Service running in background                                        │
+│  - Monitors all notifications                                           │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                        CHECK IF MONITORED APP                            │
+│  Enabled Apps:                                                          │
+│  ✓ WhatsApp (com.whatsapp)                                             │
+│  ✓ Instagram (com.instagram.android)                                   │
+│  ✓ Gmail (com.google.android.gm)                                       │
+│  ✓ Telegram (org.telegram.messenger)                                   │
+│  ✓ SMS/Messages (com.google.android.apps.messaging)                    │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                     EXTRACT TEXT FROM NOTIFICATION                       │
+│  - Gets notification.extras                                             │
+│  - Extracts all CharSequence fields                                     │
+│  - Combines into single text string                                     │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                       FIND URLs WITH REGEX                               │
+│  Pattern: (?<!@)((https?://)?(www\.)?[\w-]+(\.[\w-]+)+...)            │
+│  - Matches: http://, https://, or plain domains                        │
+│  - Excludes: Email addresses (uses (?<!@))                             │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      NORMALIZE & DEDUPLICATE                             │
+│  - Add https:// if missing                                              │
+│  - Remove www.                                                          │
+│  - Check cache (skip if analyzed within 5 seconds)                     │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         RUN ANALYSIS                                     │
+│  1. DNS Check                                                           │
+│  2. Phishing Detection                                                  │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+        ┌──────────────────┴──────────────────┐
+        │                                     │
+        ▼                                     ▼
+┌──────────────────┐              ┌──────────────────────┐
+│   SAFE RESULT    │              │ THREAT RESULT        │
+│   - Log event    │              │ - Log event          │
+│   - No alert     │              │ - Show notification  │
+└──────────────────┘              └──────────────────────┘
+                                             │
+                                             ▼
+                                  ┌──────────────────────┐
+                                  │ System Notification  │
+                                  │ "⚠️ Suspicious Link" │
+                                  │ [ALLOW button]       │
+                                  └──────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                          CLICK HANDLER WORKFLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    USER CLICKS URL IN ANY APP                            │
+│  Examples: WhatsApp message, Gmail email, SMS text                      │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                  ANDROID SYSTEM INTENT ROUTING                           │
+│  Intent: ACTION_VIEW with data URI                                     │
+│  Category: BROWSABLE                                                    │
+│  Resolved to: ZeroThreat (default browser)                             │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│              SafeBrowserActivity.onCreate()                              │
+│  - Receives intent with URL                                             │
+│  - Extracts: intent.dataString                                          │
+│  - Calls: handleUrl()                                                   │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         handleUrl() Method                               │
+│                                                                          │
+│  1. Normalize URL (add https://, extract domain)                       │
+│  2. Check if URL is blocked in database                                │
+│     └─ If blocked → Show toast & exit                                  │
+│  3. Check if Smart Mode enabled                                        │
+│     └─ If disabled → Open directly in browser                          │
+│  4. Determine source package (WhatsApp, Gmail, etc.)                   │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          DNS CHECK                                       │
+│  DnsChecker.checkUrlExists(url)                                        │
+│  - Extract domain from URL                                              │
+│  - Call: InetAddress.getByName(domain)                                 │
+│  - Runs on IO Dispatcher (async)                                       │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+        ┌──────────────────┴──────────────────┐
+        │                                     │
+        ▼                                     ▼
+  Domain EXISTS                        Domain NOT EXISTS
+        │                                     │
+        │                                     ▼
+        │                          ┌──────────────────────┐
+        │                          │ showDnsFailureDialog │
+        │                          │ "Domain Not Found"   │
+        │                          │ [Continue Anyway]    │
+        │                          │ [Block] [Exit]       │
+        │                          └──────────────────────┘
+        │
+        ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│               PhishingDetector.analyzeDetailed()                         │
+│  - Runs complete phishing analysis                                      │
+│  - Returns: AnalysisReport(result, score, description)                 │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+        ┌──────────────────┴──────────────────┐
+        │                                     │
+        ▼                                     ▼
+  PhishingResult.SAFE            PhishingResult.SUSPICIOUS/PHISHING
+        │                                     │
+        ▼                                     ▼
+┌──────────────────────┐          ┌──────────────────────────┐
+│ showSafeBrowser      │          │ showThreatDialog         │
+│ ChoiceDialog         │          │                          │
+│                      │          │ "⚠️ Threat Detected"    │
+│ "Scan Complete"      │          │ "35% Suspicious"         │
+│ "100% Safe"          │          │                          │
+│                      │          │ [Continue] [Block] [Exit]│
+│ [Continue] [Exit]    │          └──────────┬───────────────┘
+└──────────┬───────────┘                     │
+           │                      ┌──────────┼──────────┐
+           │                      │          │          │
+           └──────────────────────┘     Block      Exit
+                   │                      │          │
+                   │                      ▼          ▼
+                   │               Save to DB    Close
+                   │               (blocked)
+                   │
+                   ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                   showBrowserChoiceDialog()                              │
+│  - Query installed browsers using PackageManager                        │
+│  - Filter out ZeroThreat itself                                         │
+│  - Show list of available browsers                                      │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+                  User Selects Browser
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                  launchInSelectedBrowser()                               │
+│  - Creates explicit Intent for selected browser                         │
+│  - Sets: packageName, activityName                                      │
+│  - Adds: FLAG_ACTIVITY_NEW_TASK                                         │
+│  - Starts activity                                                      │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                     URL OPENS IN BROWSER                                 │
+│  - Chrome/Firefox/Samsung Internet opens                                │
+│  - Displays the website                                                 │
+│  - SafeBrowserActivity closes (finish())                                │
+└──────────────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                        DATABASE OPERATIONS FLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                       URL SCANNED BY DETECTOR                            │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│              PhishingDetector.logToDatabase()                            │
+│  - Only logs if from monitored source                                   │
+│  - Uses GlobalScope.launch (async)                                      │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                  UrlRepository.insertScanResult()                        │
+│  - Runs on Dispatchers.IO                                               │
+│  - Inserts into scanned_urls table                                      │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                       ROOM DATABASE SAVE                                 │
+│  Table: scanned_urls                                                    │
+│  Columns:                                                               │
+│    - id (auto increment)                                                │
+│    - url (full URL)                                                     │
+│    - domain (extracted domain)                                          │
+│    - result (SAFE/SUSPICIOUS/PHISHING)                                 │
+│    - timestamp (when scanned)                                           │
+│    - source (com.whatsapp, click_scan, etc.)                           │
+│    - phishing_score (0-100)                                             │
+│    - analysis_note (detection reason)                                   │
+└──────────────────────────────────────────────────────────────────────────┘
+
+BLOCK URL FLOW:
+┌──────────────────────────────────────────────────────────────────────────┐
+│                      USER CLICKS "BLOCK" BUTTON                          │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│              SafeBrowserActivity.blockUrlAndFinish()                     │
+│  - Normalizes URL                                                       │
+│  - Calls: urlRepository.blockUrl()                                      │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                  UrlRepository.blockUrl()                                │
+│  - Runs on Dispatchers.IO                                               │
+│  - Inserts into blocked_urls table                                      │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                       ROOM DATABASE SAVE                                 │
+│  Table: blocked_urls                                                    │
+│  URL is now permanently blocked                                         │
+│  Future clicks → "This URL is blocked by ZeroThreat" toast             │
+└──────────────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                         PHISHING DETECTION DETAILED FLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+INPUT URL: https://gooogle.com/login?user=victim
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ PARSING PHASE                                                           │
+│ ─────────────────────────────────────────────────────────────────────── │
+│ scheme:      "https"                                                    │
+│ host:        "gooogle.com"                                              │
+│ domain:      "gooogle"                                                  │
+│ path:        "/login"                                                   │
+│ query:       "user=victim"                                              │
+│ labels:      ["gooogle", "com"]                                         │
+│ candidates:  ["gooogle"]                                                │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│ SCORING PHASE (0-100 points)                                            │
+│ ─────────────────────────────────────────────────────────────────────── │
+│                                                                          │
+│ ✓ Brand Similarity Check:                                               │
+│   candidate="gooogle" vs brand="google"                                 │
+│   └─ Levenshtein distance = 1                                          │
+│   └─ MATCH! Add 32 points                                               │
+│                                                                          │
+│ ✓ Whitelist Similarity Check:                                           │
+│   candidate="gooogle" vs whitelist="google"                             │
+│   └─ Levenshtein distance = 1                                          │
+│   └─ MATCH! Add 35 points (but use MAX with brand score)               │
+│                                                                          │
+│ ✓ Keyword Check:                                                        │
+│   path="/login" contains "login" keyword                                │
+│   └─ MATCH! Add 20 points                                               │
+│                                                                          │
+│ ✓ URL Length Check:                                                     │
+│   Length: 45 characters (moderate)                                      │
+│   └─ Add 0-5 points                                                     │
+│                                                                          │
+│ ✓ TLD Check:                                                            │
+│   TLD: .com (normal, not suspicious)                                    │
+│   └─ Add 0 points                                                       │
+│                                                                          │
+│ ✓ Special Characters:                                                   │
+│   Query params present                                                  │
+│   └─ Add 0-5 points                                                     │
+│                                                                          │
+│ TOTAL SCORE CALCULATION:                                                │
+│ ─────────────────────────────────────────────────────────────────────── │
+│ Brand Score: 32 points                                                  │
+│ Whitelist Score: 35 points                                              │
+│ Smart Scoring: MAX(32, 35) = 35 points (no double penalty)             │
+│ Keyword Points: 20 points                                               │
+│ Other: ~5 points                                                        │
+│ ─────────────────────────────────────────────────────────────────────── │
+│ FINAL SCORE: 35 + 20 + 5 = 60 POINTS                                   │
+│                                                                          │
+│ SIGNALS DETECTED:                                                       │
+│ ✓ Brand similarity (gooogle)                                            │
+│ ✓ Keyword present (login)                                               │
+│ Count: 2 signals                                                        │
+│                                                                          │
+│ DECISION:                                                                │
+│ Score = 60                                                              │
+│ Score >= 10? YES → SUSPICIOUS ✓                                        │
+│ Score >= 80 + 2+ signals? NO                                            │
+│ Result: SUSPICIOUS (60% unsafe)                                         │
+└──────────────────────────┬───────────────────────────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                     SHOW THREAT DIALOG                                   │
+│                                                                          │
+│  ⚠️ Threat Detected                                                     │
+│  ──────────────────────────────────────────────                        │
+│  gooogle.com                                                            │
+│                                                                          │
+│  60% Suspicious                                                         │
+│                                                                          │
+│  Typo of whitelisted domain 'google'                                   │
+│                                                                          │
+│  ┌──────────┐  ┌───────┐  ┌──────┐                                    │
+│  │ Continue │  │ Block │  │ Exit │                                    │
+│  └──────────┘  └───────┘  └──────┘                                    │
+└──────────────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                           DATA PERSISTENCE FLOW
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         AppDatabase (Room)                              │
+│                                                                         │
+│  ┌──────────────────────────────────────────────────────────────────┐ │
+│  │ scanned_urls Table                                               │ │
+│  ├──────────────────────────────────────────────────────────────────┤ │
+│  │ Stores all URL scans from monitored sources                     │ │
+│  │ ┌────┬───────────────┬──────────┬──────────┬───────────────┐   │ │
+│  │ │ ID │ URL           │ Domain   │ Result   │ Score │ Source │   │ │
+│  │ ├────┼───────────────┼──────────┼──────────┼───────────────┤   │ │
+│  │ │ 1  │ gooogle.com   │ gooogle  │SUSPICIOUS│  35   │whatsapp│   │ │
+│  │ │ 2  │ google.com    │ google   │ SAFE     │   0   │ gmail  │   │ │
+│  │ │ 3  │ test-phish... │ test...  │ PHISHING │ 100   │whatsapp│   │ │
+│  │ └────┴───────────────┴──────────┴──────────┴───────────────┘   │ │
+│  └──────────────────────────────────────────────────────────────────┘ │
+│                                                                         │
+│  ┌──────────────────────────────────────────────────────────────────┐ │
+│  │ blocked_urls Table                                               │ │
+│  ├──────────────────────────────────────────────────────────────────┤ │
+│  │ Stores URLs user clicked "Block" on                             │ │
+│  │ ┌────┬──────────────┬────────┬──────────┬─────────────────┐    │ │
+│  │ │ ID │ URL          │ Domain │ Result   │ Score │ Note    │    │ │
+│  │ ├────┼──────────────┼────────┼──────────┼─────────────────┤    │ │
+│  │ │ 1  │ badsite.com  │badsite │PHISHING  │ 100   │Blacklist│    │ │
+│  │ │ 2  │ fake.xyz     │ fake   │SUSPICIOUS│  75   │DNS fail │    │ │
+│  │ └────┴──────────────┴────────┴──────────┴─────────────────┘    │ │
+│  └──────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                      SETTINGS & PREFERENCES MANAGEMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                    AppPreferences (SharedPreferences)                    │
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────┐   │
+│  │ User Settings:                                                 │   │
+│  ├────────────────────────────────────────────────────────────────┤   │
+│  │ ✓ smartModeEnabled: Boolean (enable/disable scanning)         │   │
+│  │ ✓ notificationMonitoring: Boolean (monitor notifications)     │   │
+│  │ ✓ monitorWhatsapp: Boolean                                    │   │
+│  │ ✓ monitorInstagram: Boolean                                   │   │
+│  │ ✓ monitorGmail: Boolean                                       │   │
+│  │ ✓ monitorTelegram: Boolean                                    │   │
+│  │ ✓ monitorMessages: Boolean                                    │   │
+│  │ ✓ linkHandlerPromptEnabled: Boolean                           │   │
+│  │ ✓ preferredBrowserPackage: String? (user's choice)           │   │
+│  │ ✓ isFirstLaunch: Boolean                                      │   │
+│  └────────────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                        COMPONENT INTERACTION MAP
+═══════════════════════════════════════════════════════════════════════════════
+
+                    ┌─────────────────────┐
+                    │   MainActivity      │
+                    │  (Entry Point)      │
+                    └──────────┬──────────┘
+                               │
+               ┌───────────────┴───────────────┐
+               │                               │
+               ▼                               ▼
+    ┌──────────────────┐           ┌──────────────────────┐
+    │ ZeroThreatApp    │           │ AppPreferences       │
+    │ (UI Compose)     │           │ (Settings Storage)   │
+    └──────────────────┘           └──────────────────────┘
+               │
+               ├─── SettingsScreen
+               ├─── ScanScreen
+               └─── HistoryScreen
+
+    ┌──────────────────────┐           ┌──────────────────────┐
+    │ SafeBrowserActivity  │◄──────────│ NotificationListener │
+    │ (Click Handler)      │           │ (Background Monitor) │
+    └──────────┬───────────┘           └──────────┬───────────┘
+               │                                   │
+               └────────────────┬──────────────────┘
+                                │
+                                ▼
+                   ┌────────────────────────┐
+                   │  PhishingDetector      │
+                   │  (Core Engine)         │
+                   └───────────┬────────────┘
+                               │
+        ┌──────────────────────┼──────────────────────┐
+        │                      │                      │
+        ▼                      ▼                      ▼
+┌──────────────┐    ┌──────────────┐      ┌──────────────┐
+│ DnsChecker   │    │BlacklistMgr  │      │WhitelistMgr  │
+└──────────────┘    └──────────────┘      └──────────────┘
+                               │
+                               ▼
+                   ┌────────────────────────┐
+                   │  UrlRepository         │
+                   │  (Data Operations)     │
+                   └───────────┬────────────┘
+                               │
+                               ▼
+                   ┌────────────────────────┐
+                   │  AppDatabase (Room)    │
+                   │  - scanned_urls        │
+                   │  - blocked_urls        │
+                   └────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                         PERMISSION DEPENDENCY TREE
+═══════════════════════════════════════════════════════════════════════════════
+
+BROWSER ROLE (Primary Permission)
+    │
+    ├─ Allows intercepting URL clicks
+    ├─ Makes ZeroThreat the default browser
+    ├─ Requested via RoleManager.ROLE_BROWSER
+    └─ Required for: SafeBrowserActivity to receive intents
+
+BIND_NOTIFICATION_LISTENER_SERVICE
+    │
+    ├─ Allows monitoring notifications
+    ├─ User enables in: Settings > Notification Access
+    └─ Required for: NotificationListener to work
+
+INTERNET
+    │
+    ├─ Allows network operations
+    ├─ Auto-granted (declared in manifest)
+    └─ Required for: DNS resolution
+
+POST_NOTIFICATIONS (Android 13+)
+    │
+    ├─ Allows showing threat notifications
+    ├─ Runtime permission (requested automatically)
+    └─ Required for: NotificationListener.showThreatNotification()
+
+QUERY_ALL_PACKAGES
+    │
+    ├─ Allows querying installed apps
+    ├─ Auto-granted (declared in manifest)
+    └─ Required for: Browser detection, source app identification
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+ZeroThreat is a PHISHING PROTECTION APP that:
+
+1. INTERCEPTS URLs when users click them (acts as default browser)
+2. MONITORS notifications from WhatsApp/Instagram/Gmail/SMS for URLs
+3. ANALYZES URLs using:
+   ├─ DNS resolution (domain exists?)
+   ├─ Blacklist matching (known phishing?)
+   ├─ Whitelist checking (legitimate site?)
+   ├─ Typosquatting detection (gooogle vs google)
+   ├─ Behavioral analysis (keywords, redirects)
+   └─ Infrastructure checks (IP, TLD, etc.)
+4. SCORES URLs from 0-100 (higher = more suspicious)
+5. SHOWS dialogs with results and options
+6. ALLOWS users to Continue, Block, or Exit
+7. OPENS URLs in user's browser choice if approved
+8. SAVES scan history and blocked URLs to database
+
+RESULT: Users are protected from phishing while accessing legitimate sites! 🛡️
+
+═══════════════════════════════════════════════════════════════════════════════
+
