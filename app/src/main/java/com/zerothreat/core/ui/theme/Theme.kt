@@ -2,32 +2,31 @@ package com.zerothreat.core.ui.theme
 
 import android.app.Activity
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val AppColorScheme = lightColorScheme(
-    primary = ElectricPurple,
-    secondary = ElectricPurpleLight,
-    background = DarkBackground,
-    surface = CardBackground,
-    surfaceVariant = SurfaceVariant,
-    onPrimary = TextWhite,
-    onSecondary = TextWhite,
-    onBackground = TextWhite,
-    onSurface = TextPrimary,
-    outline = TextMuted.copy(alpha = 0.35f),
-    outlineVariant = TextMuted.copy(alpha = 0.18f),
-    error = DangerRed
+private val AppColorScheme = darkColorScheme(
+    primary         = NeonTeal,
+    secondary       = CyberTeal,
+    background      = DarkBackground,
+    surface         = CardBackground,
+    surfaceVariant  = SurfaceVariant,
+    onPrimary       = DeepPanel,
+    onSecondary     = DeepPanel,
+    onBackground    = TextPrimary,
+    onSurface       = TextPrimary,
+    outline         = BorderColor,
+    outlineVariant  = BorderColor.copy(alpha = 0.5f),
+    error           = DangerRed
 )
 
 @Composable
 fun ZeroThreatTheme(
-    darkTheme: Boolean = false,
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val colorScheme = AppColorScheme
@@ -38,15 +37,17 @@ fun ZeroThreatTheme(
             val context = view.context
             if (context is Activity) {
                 val window = context.window
+                WindowCompat.getInsetsController(window, view)
+                    .isAppearanceLightStatusBars = false
+                @Suppress("DEPRECATION")
                 window.statusBarColor = DarkBackground.toArgb()
-                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
             }
         }
     }
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
-        content = content
+        typography  = Typography,
+        content     = content
     )
 }

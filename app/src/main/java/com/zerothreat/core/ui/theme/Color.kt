@@ -2,29 +2,37 @@ package com.zerothreat.core.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Dark-neutral palette: black footer + light-black containers
-val PureBlack = Color(0xFF0F1012)
-val DarkBackground = Color(0xFF000000)
-val WhiteBackground = DarkBackground
-val PureWhite = Color(0xFFFFFFFF)
-val CardBackground = Color(0xFF1A1D24) // light-black container
-val GlassyBlack = Color(0xFF1A1D24).copy(alpha = 0.98f)
-val SurfaceVariant = Color(0xFF2A303B)
-val PurpleGlow = Color(0xFF323949)
+// ── Dark Cyber Teal Backgrounds ──────────────────────────────
+val DarkBackground    = Color(0xFF011B1A)
+val CardBackground    = Color(0xFF0B3231)
+val SurfaceVariant    = Color(0xFF162222)
+val DeepPanel         = Color(0xFF020A0C)
+val BorderColor       = Color(0xFF1F3D3C)
 
-// Strong accent palette
-val ElectricPurple = Color(0xFF0066FF)
-val ElectricPurpleLight = Color(0xFF4D8EFF)
-val PeachAccent = ElectricPurple
-val PeachLight = Color(0xFFDCE9FF)
+// ── Legacy aliases ────────────────────────────────────────────
+val PureBlack         = Color(0xFF020A0C)
+val WhiteBackground   = DarkBackground
+val PureWhite         = Color(0xFFFFFFFF)
+val GlassyBlack       = CardBackground
+val PurpleGlow        = Color(0xFF00F5D4).copy(alpha = 0.15f)
 
-// Text colors tuned for dark containers
-val TextPrimary = Color(0xFFF3F5F8)
-val TextSecondary = Color(0xFFC2C9D3)
-val TextMuted = Color(0xFF95A0AE)
-val TextWhite = Color(0xFFFFFFFF)
+// ── Accent Colors ─────────────────────────────────────────────
+val NeonTeal          = Color(0xFF00F5D4)
+val CyberTeal         = Color(0xFF00C2A8)
 
-// Status colors
-val SafeGreen = Color(0xFF1E6B3E) // dark green for enable actions
-val WarningYellow = Color(0xFFC8921F)
-val DangerRed = Color(0xFFD56B6B)
+// ── Legacy accent aliases ─────────────────────────────────────
+val ElectricPurple      = NeonTeal
+val ElectricPurpleLight = CyberTeal
+val PeachAccent         = NeonTeal
+val PeachLight          = Color(0xFF00F5D4).copy(alpha = 0.15f)
+
+// ── Text Colors ───────────────────────────────────────────────
+val TextPrimary   = Color(0xFFE6FFFF)
+val TextSecondary = Color(0xFF7FA6A6)
+val TextMuted     = Color(0xFF7FA6A6)
+val TextWhite     = Color(0xFFE6FFFF)
+
+// ── Status Colors ─────────────────────────────────────────────
+val SafeGreen     = Color(0xFF00F5D4)
+val WarningYellow = Color(0xFFFFC857)
+val DangerRed     = Color(0xFFFF4F5B)
