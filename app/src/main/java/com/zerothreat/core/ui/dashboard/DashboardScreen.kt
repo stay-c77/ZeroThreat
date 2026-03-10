@@ -304,31 +304,53 @@ fun ThreatMetricsGrid(
             Spacer(modifier = Modifier.height(20.dp))
             HorizontalDivider(color = BorderColor)
             Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly) {
+            // ── 4 stat pills — equal width, coloured box style ──
+            Row(modifier = Modifier.fillMaxWidth()) {
                 StatPill("Analyzed", totalLinks, NeonTeal)
                 { onMetricClick(MetricDetailType.LINKS_ANALYZED) }
                 StatPill("Detected", threatsDetected, WarningYellow)
                 { onMetricClick(MetricDetailType.THREATS_DETECTED) }
                 StatPill("Blocked", threatsBlocked, DangerRed)
                 { onMetricClick(MetricDetailType.THREATS_BLOCKED) }
-                StatPill("Safe", safeLinks, NeonTeal)
+                StatPill("Safe", safeLinks, SafeGreen)
                 { onMetricClick(MetricDetailType.SAFE_LINKS) }
             }
         }
     }
 }
 
+// ── StatPill: coloured box with tinted bg + bold border — matches screenshot ──
 @Composable
-private fun StatPill(label: String, value: Int, color: Color, onClick: () -> Unit) {
-    Surface(onClick = onClick, shape = RoundedCornerShape(16.dp), color = SurfaceVariant,
-        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.35f))) {
-        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = value.toString(), color = color, fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleLarge)
-            Text(text = label, color = TextSecondary,
-                style = MaterialTheme.typography.labelSmall)
+private fun RowScope.StatPill(label: String, value: Int, color: Color, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .weight(1f)
+            .padding(horizontal = 4.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = color.copy(alpha = 0.10f),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, color.copy(alpha = 0.55f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 14.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = value.toString(),
+                color = color,
+                fontWeight = FontWeight.ExtraBold,
+                style = MaterialTheme.typography.headlineSmall
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = label,
+                color = TextSecondary,
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -374,7 +396,6 @@ fun QuickActionStrip(navController: NavController) {
                 .weight(1f)
                 .clickable {
                     navController.navigate("manual") {
-                        // ✅ mirrors the bottom nav pattern — clean back stack
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
@@ -411,7 +432,6 @@ fun QuickActionStrip(navController: NavController) {
                 .weight(1f)
                 .clickable {
                     navController.navigate("database") {
-                        // ✅ same fix
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }
