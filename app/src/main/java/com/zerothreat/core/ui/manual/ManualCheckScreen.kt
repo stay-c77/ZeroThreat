@@ -45,6 +45,55 @@ private val SCAN_MESSAGES = listOf(
     "Finalising report..."
 )
 
+// ── Structured alert data passed to the dialog ────────────────────────────────
+private data class AlertData(
+    val detectionTag: String,
+    val reasonBullets: List<String>
+)
+
+private fun buildAlertData(
+    dnsCheckFailed: Boolean,
+    result: PhishingResult,
+    score: Int,
+    description: String
+): AlertData = when {
+    dnsCheckFailed -> AlertData(
+        detectionTag  = "Domain not found",
+        reasonBullets = listOf(
+            "This domain could not be resolved",
+            "The link may be inactive or malicious"
+        )
+    )
+    result == PhishingResult.SAFE -> AlertData(
+        detectionTag  = "No threats found",
+        reasonBullets = listOf(
+            "No known phishing patterns detected",
+            "Domain appears legitimate"
+        )
+    )
+    result == PhishingResult.PHISHING -> AlertData(
+        detectionTag  = "Phishing pattern",
+        reasonBullets = bulletsFromDescription(description).ifEmpty {
+            listOf("Matches known phishing signatures")
+        }
+    )
+    else -> AlertData(
+        detectionTag  = "Suspicious pattern",
+        reasonBullets = bulletsFromDescription(description).ifEmpty {
+            listOf("Risk score: $score%", "Unusual URL characteristics detected")
+        }
+    )
+}
+
+private fun bulletsFromDescription(description: String): List<String> {
+    if (description.isBlank()) return emptyList()
+    return description
+        .split(Regex("[\\n;]"))
+        .map { it.trim().trimStart('-', '•', '*').trim() }
+        .filter { it.isNotBlank() }
+        .take(3)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManualCheckScreen(
@@ -56,7 +105,6 @@ fun ManualCheckScreen(
     val isChecking by viewModel.isChecking.collectAsState()
     val scanResult by viewModel.scanResult.collectAsState()
 
-    // ── Full-screen scanning overlay ──
     if (isChecking) {
         ScanningOverlay(url = urlInput)
         return
@@ -71,22 +119,20 @@ fun ManualCheckScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(modifier = Modifier.height(Spacing.Screen.topSpacing))
-
         SecurityPulseAnimation(modifier = Modifier.size(86.dp), tint = NeonTeal)
-
         Spacer(modifier = Modifier.height(Spacing.xxl))
-
-        Text(text = "Check a Link", style = MaterialTheme.typography.headlineSmall,
-            color = TextWhite, fontWeight = FontWeight.Bold)
-
+        Text(
+            text = "Check a Link",
+            style = MaterialTheme.typography.headlineSmall,
+            color = TextWhite, fontWeight = FontWeight.Bold
+        )
         Spacer(modifier = Modifier.height(Spacing.xs))
-
-        Text(text = "Paste any URL below to check if it's safe",
+        Text(
+            text = "Paste any URL below to check if it's safe",
             style = MaterialTheme.typography.bodyMedium,
-            color = TextWhite.copy(alpha = 0.85f), textAlign = TextAlign.Center)
-
+            color = TextWhite.copy(alpha = 0.85f), textAlign = TextAlign.Center
+        )
         Spacer(modifier = Modifier.height(Spacing.Screen.topSpacing))
-
         OutlinedTextField(
             value = urlInput,
             onValueChange = { urlInput = it },
@@ -98,8 +144,7 @@ fun ManualCheckScreen(
             trailingIcon = {
                 if (urlInput.isNotEmpty()) {
                     IconButton(onClick = { urlInput = "" }) {
-                        Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear",
-                            tint = TextSecondary)
+                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = TextSecondary)
                     }
                 }
             },
@@ -121,9 +166,7 @@ fun ManualCheckScreen(
             ),
             singleLine = true
         )
-
         Spacer(modifier = Modifier.height(Spacing.md))
-
         Button(
             onClick = { if (urlInput.isNotEmpty()) viewModel.checkUrl(urlInput) },
             modifier = Modifier.fillMaxWidth().height(Spacing.Button.height),
@@ -142,9 +185,7 @@ fun ManualCheckScreen(
             Text(text = "Check Link", style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold)
         }
-
         Spacer(modifier = Modifier.height(Spacing.Screen.topSpacing))
-
         Card(
             modifier = Modifier.fillMaxWidth()
                 .appContainer(hazeState = hazeState, cornerRadius = 24.dp),
@@ -169,45 +210,36 @@ fun ManualCheckScreen(
         }
     }
 
-    // ── Alert Dialog — onDone pops back to dashboard cleanly ──
+    // ── Result dialog ──────────────────────────────────────────────────────────
     scanResult?.let { result ->
-        val displayMessage = when {
-            result.dnsCheckFailed ->
-                "${result.url}\n\n${result.description}\n\nThis domain does not exist or cannot be resolved."
-            result.result == PhishingResult.SAFE -> {
-                val safetyPercentage = 100 - result.score
-                "${result.url}\n\n${safetyPercentage}% Safe\n\n${result.description}"
-            }
-            else ->
-                "${result.url}\n\n${result.score}% ${
-                    when (result.result) {
-                        PhishingResult.SUSPICIOUS -> "Suspicious"
-                        PhishingResult.PHISHING   -> "Phishing"
-                        else                      -> "Unknown"
-                    }
-                }\n\n${result.description}"
-        }
+        val alertData = buildAlertData(
+            dnsCheckFailed = result.dnsCheckFailed,
+            result         = result.result,
+            score          = result.score,
+            description    = result.description
+        )
 
-        // ✅ dismiss + pop back to the existing dashboard — no duplicate destinations
         val onDone: () -> Unit = {
             viewModel.dismissAlert()
             urlInput = ""
             navController.navigate("dashboard") {
-                popUpTo(navController.graph.findStartDestination().id) {
-                    saveState = true
-                }
+                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
                 launchSingleTop = true
-                restoreState = true
+                restoreState    = true
             }
         }
 
+        // ✅ NEW signature — no 'reason' parameter anywhere
         ThreatAlertDialog(
-            url = result.url,
-            threatLevel = result.result,
-            reason = displayMessage,
-            onBlock  = { onDone() },
-            onIgnore = { onDone() },
-            onDismiss = { onDone() }
+            url           = result.url,
+            threatLevel   = result.result,
+            score         = result.score,
+            detectionTag  = alertData.detectionTag,
+            reasonBullets = alertData.reasonBullets,
+            onBlock       = { onDone() },
+            onIgnore      = { onDone() },
+            onContinue    = { onDone() },
+            onDismiss     = { onDone() }
         )
     }
 }
@@ -222,102 +254,66 @@ private fun ScanningOverlay(url: String) {
         animationSpec = tween(300, easing = EaseInOutSine),
         label = "msg_alpha"
     )
-
     LaunchedEffect(Unit) {
         while (true) {
-            delay(800)
-            messageAlpha = 0f
-            delay(320)
-            messageIndex = (messageIndex + 1) % SCAN_MESSAGES.size
-            messageAlpha = 1f
+            delay(800); messageAlpha = 0f
+            delay(320); messageIndex = (messageIndex + 1) % SCAN_MESSAGES.size; messageAlpha = 1f
         }
     }
-
     val infiniteTransition = rememberInfiniteTransition(label = "scan")
-
     val arcRotation by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(900, easing = LinearEasing), RepeatMode.Restart),
         label = "arc_rotation")
-
     val ring1 by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = EaseOutCubic), repeatMode = RepeatMode.Restart),
+        animationSpec = infiniteRepeatable(tween(2000, easing = EaseOutCubic), RepeatMode.Restart),
         label = "ring1")
     val ring2 by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, delayMillis = 600, easing = EaseOutCubic),
-            repeatMode = RepeatMode.Restart), label = "ring2")
+        animationSpec = infiniteRepeatable(tween(2000, delayMillis = 600, easing = EaseOutCubic), RepeatMode.Restart),
+        label = "ring2")
     val ring3 by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, delayMillis = 1200, easing = EaseOutCubic),
-            repeatMode = RepeatMode.Restart), label = "ring3")
-
+        animationSpec = infiniteRepeatable(tween(2000, delayMillis = 1200, easing = EaseOutCubic), RepeatMode.Restart),
+        label = "ring3")
     val shieldScale by infiniteTransition.animateFloat(
         initialValue = 0.94f, targetValue = 1.06f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = EaseInOutSine), repeatMode = RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(1000, easing = EaseInOutSine), RepeatMode.Reverse),
         label = "shield_scale")
     val shieldAlpha by infiniteTransition.animateFloat(
         initialValue = 0.7f, targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = EaseInOutSine), repeatMode = RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(1000, easing = EaseInOutSine), RepeatMode.Reverse),
         label = "shield_alpha")
 
-    Box(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F10)),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F10)),
+        contentAlignment = Alignment.Center) {
         RadarRing(progress = ring1, maxRadius = 200f, color = NeonTeal)
         RadarRing(progress = ring2, maxRadius = 200f, color = NeonTeal)
         RadarRing(progress = ring3, maxRadius = 200f, color = NeonTeal)
-
         Canvas(modifier = Modifier.size(180.dp)) {
-            val strokeWidth = 5.dp.toPx()
-            val inset = strokeWidth / 2f
-            val arcSize = size.width - strokeWidth
+            val sw = 5.dp.toPx(); val inset = sw / 2f; val arcSize = size.width - sw
             drawArc(color = NeonTeal.copy(alpha = 0.12f), startAngle = 0f, sweepAngle = 360f,
                 useCenter = false, topLeft = Offset(inset, inset), size = Size(arcSize, arcSize),
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
-            drawArc(
-                brush = Brush.sweepGradient(colors = listOf(Color.Transparent, NeonTeal, CyberTeal)),
+                style = Stroke(width = sw, cap = StrokeCap.Round))
+            drawArc(brush = Brush.sweepGradient(listOf(Color.Transparent, NeonTeal, CyberTeal)),
                 startAngle = arcRotation, sweepAngle = 120f,
                 useCenter = false, topLeft = Offset(inset, inset), size = Size(arcSize, arcSize),
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
+                style = Stroke(width = sw, cap = StrokeCap.Round))
         }
-
-        Box(
-            modifier = Modifier
-                .size((72 * shieldScale).dp)
-                .background(
-                    brush = Brush.radialGradient(colors = listOf(
-                        NeonTeal.copy(alpha = 0.18f), Color.Transparent)),
-                    shape = CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Surface(modifier = Modifier.size(64.dp), shape = CircleShape,
-                color = Color.Transparent,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.5.dp, NeonTeal.copy(alpha = shieldAlpha * 0.8f))) {}
+        Box(modifier = Modifier.size((72 * shieldScale).dp)
+            .background(Brush.radialGradient(listOf(NeonTeal.copy(alpha = 0.18f), Color.Transparent)), CircleShape),
+            contentAlignment = Alignment.Center) {
+            Surface(modifier = Modifier.size(64.dp), shape = CircleShape, color = Color.Transparent,
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, NeonTeal.copy(alpha = shieldAlpha * 0.8f))) {}
             Icon(imageVector = Icons.Default.Shield, contentDescription = null,
                 tint = NeonTeal.copy(alpha = shieldAlpha), modifier = Modifier.size(36.dp))
         }
-
-        Column(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        Column(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp),
+            horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = "Scanning", color = TextPrimary,
                 fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, letterSpacing = 1.sp)
             Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = url.take(42) + if (url.length > 42) "…" else "",
-                color = NeonTeal.copy(alpha = 0.7f),
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp)
-            )
+            Text(text = url.take(42) + if (url.length > 42) "…" else "",
+                color = NeonTeal.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 32.dp))
             Spacer(modifier = Modifier.height(20.dp))
             Text(text = SCAN_MESSAGES[messageIndex], color = TextSecondary,
                 style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center,
@@ -328,11 +324,10 @@ private fun ScanningOverlay(url: String) {
                     val dotAlpha by infiniteTransition.animateFloat(
                         initialValue = 0.2f, targetValue = 1f,
                         animationSpec = infiniteRepeatable(
-                            animation = tween(600, delayMillis = i * 200, easing = EaseInOutSine),
-                            repeatMode = RepeatMode.Reverse),
+                            tween(600, delayMillis = i * 200, easing = EaseInOutSine), RepeatMode.Reverse),
                         label = "dot_$i")
                     Box(modifier = Modifier.size(7.dp).alpha(dotAlpha)
-                        .background(color = NeonTeal, shape = CircleShape))
+                        .background(NeonTeal, CircleShape))
                 }
             }
         }
@@ -344,10 +339,8 @@ private fun RadarRing(progress: Float, maxRadius: Float, color: Color) {
     val radius = progress * maxRadius
     val alpha = (1f - progress).coerceIn(0f, 1f)
     Canvas(modifier = Modifier.fillMaxSize()) {
-        val cx = size.width / 2f
-        val cy = size.height / 2f
         drawCircle(color = color.copy(alpha = alpha * 0.35f),
-            radius = radius.dp.toPx(), center = Offset(cx, cy),
+            radius = radius.dp.toPx(), center = Offset(size.width / 2f, size.height / 2f),
             style = Stroke(width = 2.dp.toPx()))
     }
 }
