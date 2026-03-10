@@ -174,8 +174,9 @@ fun MainScaffold(
             composable(Screen.Dashboard.route) {
                 DashboardScreen(navController = innerNavController)
             }
+            // ── ✅ navController wired in — enables post-scan navigation back to dashboard ──
             composable(Screen.ManualCheck.route) {
-                ManualCheckScreen()
+                ManualCheckScreen(navController = innerNavController)
             }
             composable(Screen.Database.route) {
                 DatabaseScreen()
@@ -200,7 +201,6 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
         onSplashFinished()
     }
 
-    // Animations
     val infiniteTransition = rememberInfiniteTransition(label = "splash")
 
     val pulseAlpha by infiniteTransition.animateFloat(
@@ -234,18 +234,10 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF011B1A),
-                        Color(0xFF042F2E),
-                        Color(0xFF011B1A)
-                    )
-                )
-            ),
+            .background(Color(0xFF0F0F10)),   // flat DarkBackground — no teal tint
         contentAlignment = Alignment.Center
     ) {
-        // ── Background glow orb ──
+        // ── Background glow orb (violet via NeonTeal token) ──
         Box(
             modifier = Modifier
                 .size(340.dp)
@@ -350,9 +342,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
             Surface(
                 shape = RoundedCornerShape(20.dp),
                 color = CardBackground,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp, BorderColor
-                )
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),

@@ -1,7 +1,10 @@
 package com.zerothreat.core.ui.manual
 
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -11,27 +14,53 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.rememberNavController
 import com.zerothreat.core.detector.PhishingResult
 import com.zerothreat.core.ui.alerts.ThreatAlertDialog
 import com.zerothreat.core.ui.components.SecurityPulseAnimation
 import com.zerothreat.core.ui.theme.*
+import kotlinx.coroutines.delay
+
+private val SCAN_MESSAGES = listOf(
+    "Resolving domain...",
+    "Checking blacklists...",
+    "Analysing URL patterns...",
+    "Inspecting keywords...",
+    "Calculating threat score...",
+    "Finalising report..."
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManualCheckScreen(
+    navController: NavController = rememberNavController(),
     viewModel: ManualCheckViewModel = viewModel()
 ) {
     val hazeState = LocalUiSurfaceState.current
     var urlInput by remember { mutableStateOf("") }
     val isChecking by viewModel.isChecking.collectAsState()
     val scanResult by viewModel.scanResult.collectAsState()
+
+    // ── Full-screen scanning overlay ──
+    if (isChecking) {
+        ScanningOverlay(url = urlInput)
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -43,154 +72,95 @@ fun ManualCheckScreen(
     ) {
         Spacer(modifier = Modifier.height(Spacing.Screen.topSpacing))
 
-        SecurityPulseAnimation(
-            modifier = Modifier.size(86.dp),
-            tint = ElectricPurple
-        )
+        SecurityPulseAnimation(modifier = Modifier.size(86.dp), tint = NeonTeal)
 
         Spacer(modifier = Modifier.height(Spacing.xxl))
 
-        Text(
-            text = "Check a Link",
-            style = MaterialTheme.typography.headlineSmall,
-            color = TextWhite,
-            fontWeight = FontWeight.Bold
-        )
+        Text(text = "Check a Link", style = MaterialTheme.typography.headlineSmall,
+            color = TextWhite, fontWeight = FontWeight.Bold)
 
         Spacer(modifier = Modifier.height(Spacing.xs))
 
-        Text(
-            text = "Paste any URL below to check if it's safe",
+        Text(text = "Paste any URL below to check if it's safe",
             style = MaterialTheme.typography.bodyMedium,
-            color = TextWhite.copy(alpha = 0.85f),
-            textAlign = TextAlign.Center
-        )
+            color = TextWhite.copy(alpha = 0.85f), textAlign = TextAlign.Center)
 
         Spacer(modifier = Modifier.height(Spacing.Screen.topSpacing))
 
-        // URL Input Field
         OutlinedTextField(
             value = urlInput,
             onValueChange = { urlInput = it },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = {
-                Text("https://example.com", color = TextMuted)
-            },
+            placeholder = { Text("https://example.com", color = TextMuted) },
             leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Link,
-                    contentDescription = "URL",
-                    tint = ElectricPurple
-                )
+                Icon(imageVector = Icons.Default.Link, contentDescription = "URL", tint = NeonTeal)
             },
             trailingIcon = {
                 if (urlInput.isNotEmpty()) {
                     IconButton(onClick = { urlInput = "" }) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "Clear",
-                            tint = TextSecondary
-                        )
+                        Icon(imageVector = Icons.Default.Clear, contentDescription = "Clear",
+                            tint = TextSecondary)
                     }
                 }
             },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = ElectricPurple,
+                focusedBorderColor = NeonTeal,
                 unfocusedBorderColor = TextMuted,
                 focusedContainerColor = CardBackground,
                 unfocusedContainerColor = CardBackground,
                 focusedTextColor = TextPrimary,
                 unfocusedTextColor = TextPrimary,
-                cursorColor = ElectricPurple,
-                focusedLeadingIconColor = ElectricPurple,
+                cursorColor = NeonTeal,
+                focusedLeadingIconColor = NeonTeal,
                 unfocusedLeadingIconColor = TextMuted
             ),
             shape = RoundedCornerShape(Spacing.Button.cornerRadius),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(
-                onDone = {
-                    if (urlInput.isNotEmpty()) {
-                        viewModel.checkUrl(urlInput)
-                    }
-                }
+                onDone = { if (urlInput.isNotEmpty()) viewModel.checkUrl(urlInput) }
             ),
             singleLine = true
         )
 
         Spacer(modifier = Modifier.height(Spacing.md))
 
-        // Check Button
         Button(
-            onClick = {
-                if (urlInput.isNotEmpty()) {
-                    viewModel.checkUrl(urlInput)
-                }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(Spacing.Button.height),
-            enabled = urlInput.isNotEmpty() && !isChecking,
+            onClick = { if (urlInput.isNotEmpty()) viewModel.checkUrl(urlInput) },
+            modifier = Modifier.fillMaxWidth().height(Spacing.Button.height),
+            enabled = urlInput.isNotEmpty(),
             colors = ButtonDefaults.buttonColors(
-                containerColor = ElectricPurple,
+                containerColor = NeonTeal,
                 contentColor = PureBlack,
                 disabledContainerColor = TextMuted.copy(alpha = 0.4f),
                 disabledContentColor = TextSecondary
             ),
             shape = RoundedCornerShape(Spacing.Button.cornerRadius)
         ) {
-            if (isChecking) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = TextPrimary,
-                    strokeWidth = 2.dp
-                )
-            } else {
-                Icon(
-                    imageVector = Icons.Default.Security,
-                    contentDescription = "Check",
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Check Link",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
+            Icon(imageVector = Icons.Default.Security, contentDescription = "Check",
+                modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "Check Link", style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold)
         }
 
         Spacer(modifier = Modifier.height(Spacing.Screen.topSpacing))
 
-        // Info Card (Kept static for now)
         Card(
-            modifier = Modifier
-                .fillMaxWidth()
+            modifier = Modifier.fillMaxWidth()
                 .appContainer(hazeState = hazeState, cornerRadius = 24.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.Transparent
-            ),
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             shape = RoundedCornerShape(Spacing.Card.borderRadius),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier.padding(Spacing.lg)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Info",
-                        tint = ElectricPurple,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    Icon(imageVector = Icons.Default.Info, contentDescription = "Info",
+                        tint = NeonTeal, modifier = Modifier.size(24.dp))
                     Spacer(modifier = Modifier.width(Spacing.md))
-                    Text(
-                        text = "How it works",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Text(text = "How it works", style = MaterialTheme.typography.titleMedium,
+                        color = TextPrimary, fontWeight = FontWeight.SemiBold)
                 }
-
                 Spacer(modifier = Modifier.height(Spacing.md))
-
                 InfoItem("✓ Checks against known phishing databases")
                 InfoItem("✓ Analyzes URL patterns and keywords")
                 InfoItem("✓ Provides instant threat assessment")
@@ -199,24 +169,35 @@ fun ManualCheckScreen(
         }
     }
 
-    // Alert Dialog - Enhanced with score and description
+    // ── Alert Dialog — onDone pops back to dashboard cleanly ──
     scanResult?.let { result ->
         val displayMessage = when {
-            result.dnsCheckFailed -> {
+            result.dnsCheckFailed ->
                 "${result.url}\n\n${result.description}\n\nThis domain does not exist or cannot be resolved."
-            }
             result.result == PhishingResult.SAFE -> {
                 val safetyPercentage = 100 - result.score
                 "${result.url}\n\n${safetyPercentage}% Safe\n\n${result.description}"
             }
-            else -> {
+            else ->
                 "${result.url}\n\n${result.score}% ${
-                    when(result.result) {
+                    when (result.result) {
                         PhishingResult.SUSPICIOUS -> "Suspicious"
-                        PhishingResult.PHISHING -> "Phishing"
-                        else -> "Unknown"
+                        PhishingResult.PHISHING   -> "Phishing"
+                        else                      -> "Unknown"
                     }
                 }\n\n${result.description}"
+        }
+
+        // ✅ dismiss + pop back to the existing dashboard — no duplicate destinations
+        val onDone: () -> Unit = {
+            viewModel.dismissAlert()
+            urlInput = ""
+            navController.navigate("dashboard") {
+                popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = true
+                }
+                launchSingleTop = true
+                restoreState = true
             }
         }
 
@@ -224,23 +205,157 @@ fun ManualCheckScreen(
             url = result.url,
             threatLevel = result.result,
             reason = displayMessage,
-            onBlock = { viewModel.dismissAlert() },
-            onIgnore = { viewModel.dismissAlert() },
-            onDismiss = { viewModel.dismissAlert() }
+            onBlock  = { onDone() },
+            onIgnore = { onDone() },
+            onDismiss = { onDone() }
         )
+    }
+}
+
+// ==================== SCANNING OVERLAY ====================
+@Composable
+private fun ScanningOverlay(url: String) {
+    var messageIndex by remember { mutableStateOf(0) }
+    var messageAlpha by remember { mutableStateOf(1f) }
+    val animatedAlpha by animateFloatAsState(
+        targetValue = messageAlpha,
+        animationSpec = tween(300, easing = EaseInOutSine),
+        label = "msg_alpha"
+    )
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(800)
+            messageAlpha = 0f
+            delay(320)
+            messageIndex = (messageIndex + 1) % SCAN_MESSAGES.size
+            messageAlpha = 1f
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "scan")
+
+    val arcRotation by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+        label = "arc_rotation")
+
+    val ring1 by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = EaseOutCubic), repeatMode = RepeatMode.Restart),
+        label = "ring1")
+    val ring2 by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, delayMillis = 600, easing = EaseOutCubic),
+            repeatMode = RepeatMode.Restart), label = "ring2")
+    val ring3 by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, delayMillis = 1200, easing = EaseOutCubic),
+            repeatMode = RepeatMode.Restart), label = "ring3")
+
+    val shieldScale by infiniteTransition.animateFloat(
+        initialValue = 0.94f, targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = EaseInOutSine), repeatMode = RepeatMode.Reverse),
+        label = "shield_scale")
+    val shieldAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.7f, targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = EaseInOutSine), repeatMode = RepeatMode.Reverse),
+        label = "shield_alpha")
+
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color(0xFF0F0F10)),
+        contentAlignment = Alignment.Center
+    ) {
+        RadarRing(progress = ring1, maxRadius = 200f, color = NeonTeal)
+        RadarRing(progress = ring2, maxRadius = 200f, color = NeonTeal)
+        RadarRing(progress = ring3, maxRadius = 200f, color = NeonTeal)
+
+        Canvas(modifier = Modifier.size(180.dp)) {
+            val strokeWidth = 5.dp.toPx()
+            val inset = strokeWidth / 2f
+            val arcSize = size.width - strokeWidth
+            drawArc(color = NeonTeal.copy(alpha = 0.12f), startAngle = 0f, sweepAngle = 360f,
+                useCenter = false, topLeft = Offset(inset, inset), size = Size(arcSize, arcSize),
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
+            drawArc(
+                brush = Brush.sweepGradient(colors = listOf(Color.Transparent, NeonTeal, CyberTeal)),
+                startAngle = arcRotation, sweepAngle = 120f,
+                useCenter = false, topLeft = Offset(inset, inset), size = Size(arcSize, arcSize),
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
+        }
+
+        Box(
+            modifier = Modifier
+                .size((72 * shieldScale).dp)
+                .background(
+                    brush = Brush.radialGradient(colors = listOf(
+                        NeonTeal.copy(alpha = 0.18f), Color.Transparent)),
+                    shape = CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(modifier = Modifier.size(64.dp), shape = CircleShape,
+                color = Color.Transparent,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.5.dp, NeonTeal.copy(alpha = shieldAlpha * 0.8f))) {}
+            Icon(imageVector = Icons.Default.Shield, contentDescription = null,
+                tint = NeonTeal.copy(alpha = shieldAlpha), modifier = Modifier.size(36.dp))
+        }
+
+        Column(
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 120.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = "Scanning", color = TextPrimary,
+                fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, letterSpacing = 1.sp)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = url.take(42) + if (url.length > 42) "…" else "",
+                color = NeonTeal.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 32.dp)
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(text = SCAN_MESSAGES[messageIndex], color = TextSecondary,
+                style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center,
+                modifier = Modifier.alpha(animatedAlpha))
+            Spacer(modifier = Modifier.height(20.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                repeat(3) { i ->
+                    val dotAlpha by infiniteTransition.animateFloat(
+                        initialValue = 0.2f, targetValue = 1f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(600, delayMillis = i * 200, easing = EaseInOutSine),
+                            repeatMode = RepeatMode.Reverse),
+                        label = "dot_$i")
+                    Box(modifier = Modifier.size(7.dp).alpha(dotAlpha)
+                        .background(color = NeonTeal, shape = CircleShape))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RadarRing(progress: Float, maxRadius: Float, color: Color) {
+    val radius = progress * maxRadius
+    val alpha = (1f - progress).coerceIn(0f, 1f)
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        drawCircle(color = color.copy(alpha = alpha * 0.35f),
+            radius = radius.dp.toPx(), center = Offset(cx, cy),
+            style = Stroke(width = 2.dp.toPx()))
     }
 }
 
 @Composable
 fun InfoItem(text: String) {
-    Row(
-        modifier = Modifier.padding(vertical = 4.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = TextSecondary,
-            lineHeight = 20.sp
-        )
+    Row(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(text = text, style = MaterialTheme.typography.bodyMedium,
+            color = TextSecondary, lineHeight = 20.sp)
     }
 }

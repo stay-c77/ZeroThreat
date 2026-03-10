@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.rememberNavController
 import com.zerothreat.core.data.AppPreferences
 import com.zerothreat.core.data.db.AllScannedUrl
@@ -93,26 +94,21 @@ fun DashboardScreen(
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF011B1A), Color(0xFF042F2E))
-                )
-            ),
+            .background(Color(0xFF0F0F10)),
         contentPadding = PaddingValues(bottom = 120.dp, top = 16.dp)
     ) {
-        item { UserGreetingCard(userName = profileName, userRole = profileRole,
-            onAvatarClick = { showProfileDialog = true },
-            onEditClick = { showProfileDialog = true }) }
-
+        item {
+            UserGreetingCard(userName = profileName, userRole = profileRole,
+                onAvatarClick = { showProfileDialog = true },
+                onEditClick = { showProfileDialog = true })
+        }
         item { ProtectionStatusCard(isProtected = isProtected) }
-
         item {
             if (!isBrowserRoleEnabled || !isSmartModeEnabled) {
                 PermissionStatusCard(isBrowserRoleEnabled = isBrowserRoleEnabled,
                     isSmartModeEnabled = isSmartModeEnabled, context = context)
             }
         }
-
         item {
             ThreatMetricsGrid(totalLinks = uiState.totalLinksAnalyzed,
                 threatsDetected = uiState.threatsDetected,
@@ -120,17 +116,9 @@ fun DashboardScreen(
                 safeLinks = uiState.safeLinks,
                 onMetricClick = { metric -> selectedMetric = metric })
         }
-
-        // SECTION 3: Quick Action Strip — wired to correct routes
         item { QuickActionStrip(navController = navController) }
-
-        // SECTION 4: Intelligence Sources
         item { ThreatSourcesSection(sources = uiState.threatSources) }
-
-        // SECTION 5: Live Activity Feed
         item { RecentAlertsSection(alerts = uiState.recentAlerts) }
-
-        // SECTION 6: Privacy Footer
         item { PrivacyStatement() }
     }
 
@@ -154,10 +142,8 @@ fun DashboardScreen(
 // ==================== SECTION 1A: User Greeting Card ====================
 @Composable
 fun UserGreetingCard(
-    userName: String,
-    userRole: String,
-    onAvatarClick: () -> Unit,
-    onEditClick: () -> Unit
+    userName: String, userRole: String,
+    onAvatarClick: () -> Unit, onEditClick: () -> Unit
 ) {
     val greeting = remember {
         when (java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)) {
@@ -169,8 +155,7 @@ fun UserGreetingCard(
     }
     Surface(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(20.dp),
-        color = CardBackground,
+        shape = RoundedCornerShape(20.dp), color = CardBackground,
         border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
     ) {
         Row(
@@ -180,11 +165,9 @@ fun UserGreetingCard(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    modifier = Modifier.size(44.dp).clickable { onAvatarClick() },
+                Surface(modifier = Modifier.size(44.dp).clickable { onAvatarClick() },
                     shape = CircleShape, color = SurfaceVariant,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonTeal.copy(alpha = 0.4f))
-                ) {
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonTeal.copy(alpha = 0.4f))) {
                     Icon(imageVector = Icons.Default.Person, contentDescription = null,
                         modifier = Modifier.padding(10.dp), tint = NeonTeal)
                 }
@@ -228,8 +211,7 @@ fun ProtectionStatusCard(isProtected: Boolean) {
                 shape = CircleShape))
             Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
                 color = CardBackground,
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, NeonTeal.copy(alpha = 0.6f))
-            ) {
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, NeonTeal.copy(alpha = 0.6f))) {
                 Column(modifier = Modifier.fillMaxWidth()
                     .padding(vertical = 20.dp, horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally) {
@@ -241,8 +223,7 @@ fun ProtectionStatusCard(isProtected: Boolean) {
                             modifier = Modifier.size(28.dp))
                     }
                     Spacer(modifier = Modifier.height(10.dp))
-                    Text(text = "● PROTECTED", color = NeonTeal,
-                        fontWeight = FontWeight.ExtraBold,
+                    Text(text = "● PROTECTED", color = NeonTeal, fontWeight = FontWeight.ExtraBold,
                         style = MaterialTheme.typography.titleMedium,
                         letterSpacing = 3.sp, textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(4.dp))
@@ -265,15 +246,29 @@ fun ThreatMetricsGrid(
     val safeScore = if (totalLinks > 0)
         ((safeLinks.toFloat() / totalLinks.toFloat()) * 100).toInt() else 100
 
+    val targetSweep = if (totalLinks > 0)
+        (safeLinks.toFloat() / totalLinks.toFloat()) * 360f else 360f
+
     val ringColor = when {
         safeScore >= 80 -> NeonTeal
         safeScore >= 50 -> WarningYellow
         else            -> DangerRed
     }
-    val animatedSweep by animateFloatAsState(
-        targetValue = if (totalLinks > 0)
-            (safeLinks.toFloat() / totalLinks.toFloat()) * 360f else 360f,
-        animationSpec = tween(1200, easing = EaseOutCubic), label = "ring_sweep")
+
+    val animatedSweep = remember { Animatable(0f) }
+    val animatedScore = remember { Animatable(0f) }
+
+    LaunchedEffect(targetSweep) {
+        animatedSweep.snapTo(0f)
+        animatedSweep.animateTo(360f, animationSpec = tween(900, easing = EaseOutCubic))
+        animatedSweep.animateTo(targetSweep, animationSpec = tween(600, easing = EaseInOutCubic))
+    }
+    LaunchedEffect(safeScore) {
+        animatedScore.snapTo(0f)
+        animatedScore.animateTo(safeScore.toFloat(), animationSpec = tween(1200, easing = EaseOutCubic))
+    }
+
+    val displayScore = animatedScore.value.toInt()
 
     Surface(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
         shape = RoundedCornerShape(28.dp), color = CardBackground,
@@ -291,12 +286,12 @@ fun ThreatMetricsGrid(
                         style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
                     drawArc(brush = Brush.sweepGradient(colors = listOf(
                         ringColor.copy(alpha = 0.4f), ringColor, ringColor)),
-                        startAngle = -90f, sweepAngle = animatedSweep, useCenter = false,
+                        startAngle = -90f, sweepAngle = animatedSweep.value, useCenter = false,
                         topLeft = Offset(inset, inset), size = Size(arcSize, arcSize),
                         style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "$safeScore%", color = ringColor,
+                    Text(text = "$displayScore%", color = ringColor,
                         fontWeight = FontWeight.ExtraBold,
                         style = MaterialTheme.typography.headlineLarge)
                     Text(text = "SAFETY SCORE", color = TextSecondary,
@@ -373,34 +368,29 @@ fun QuickActionStrip(navController: NavController) {
             .padding(horizontal = 20.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // ── Check a Link → navigates to "manual" (ManualCheck screen) ──
+        // ── Check a Link ──
         Surface(
             modifier = Modifier
                 .weight(1f)
                 .clickable {
                     navController.navigate("manual") {
+                        // ✅ mirrors the bottom nav pattern — clean back stack
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
                         launchSingleTop = true
+                        restoreState = true
                     }
                 },
-            shape = RoundedCornerShape(18.dp),
-            color = CardBackground,
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp, NeonTeal.copy(alpha = 0.5f)
-            )
+            shape = RoundedCornerShape(18.dp), color = CardBackground,
+            border = androidx.compose.foundation.BorderStroke(1.dp, NeonTeal.copy(alpha = 0.5f))
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(color = NeonTeal.copy(alpha = 0.12f), shape = CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
+                horizontalArrangement = Arrangement.Center) {
+                Box(modifier = Modifier.size(36.dp)
+                    .background(color = NeonTeal.copy(alpha = 0.12f), shape = CircleShape),
+                    contentAlignment = Alignment.Center) {
                     Icon(imageVector = Icons.Default.Search, contentDescription = null,
                         tint = NeonTeal, modifier = Modifier.size(18.dp))
                 }
@@ -415,34 +405,29 @@ fun QuickActionStrip(navController: NavController) {
             }
         }
 
-        // ── View History → navigates to "database" (Database screen) ──
+        // ── View History ──
         Surface(
             modifier = Modifier
                 .weight(1f)
                 .clickable {
                     navController.navigate("database") {
+                        // ✅ same fix
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
                         launchSingleTop = true
+                        restoreState = true
                     }
                 },
-            shape = RoundedCornerShape(18.dp),
-            color = CardBackground,
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp, CyberTeal.copy(alpha = 0.4f)
-            )
+            shape = RoundedCornerShape(18.dp), color = CardBackground,
+            border = androidx.compose.foundation.BorderStroke(1.dp, CyberTeal.copy(alpha = 0.4f))
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(color = CyberTeal.copy(alpha = 0.12f), shape = CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
+                horizontalArrangement = Arrangement.Center) {
+                Box(modifier = Modifier.size(36.dp)
+                    .background(color = CyberTeal.copy(alpha = 0.12f), shape = CircleShape),
+                    contentAlignment = Alignment.Center) {
                     Icon(imageVector = Icons.Default.History, contentDescription = null,
                         tint = CyberTeal, modifier = Modifier.size(18.dp))
                 }
@@ -475,20 +460,16 @@ fun ThreatSourcesSection(sources: ThreatSources) {
                         tint = NeonTeal, modifier = Modifier.size(16.dp))
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(text = "Intelligence Sources",
-                    style = MaterialTheme.typography.titleMedium,
+                Text(text = "Intelligence Sources", style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(20.dp))
             val total = (sources.sms + sources.browser + sources.notifications).coerceAtLeast(1)
-            SourceRow(Icons.Default.Message, "SMS", sources.sms,
-                sources.sms.toFloat() / total)
+            SourceRow(Icons.Default.Message, "SMS", sources.sms, sources.sms.toFloat() / total)
             Spacer(modifier = Modifier.height(14.dp))
-            SourceRow(Icons.Default.Language, "Web", sources.browser,
-                sources.browser.toFloat() / total)
+            SourceRow(Icons.Default.Language, "Web", sources.browser, sources.browser.toFloat() / total)
             Spacer(modifier = Modifier.height(14.dp))
-            SourceRow(Icons.Default.Notifications, "Apps", sources.notifications,
-                sources.notifications.toFloat() / total)
+            SourceRow(Icons.Default.Notifications, "Apps", sources.notifications, sources.notifications.toFloat() / total)
             if (sources.sms == 0 && sources.browser == 0 && sources.notifications == 0) {
                 Spacer(modifier = Modifier.height(16.dp))
                 EmptyStateNote("No sources detected yet. Start browsing to see data.")
@@ -501,8 +482,7 @@ fun ThreatSourcesSection(sources: ThreatSources) {
 private fun SourceRow(icon: ImageVector, label: String, count: Int, fraction: Float) {
     val animatedFraction by animateFloatAsState(targetValue = fraction,
         animationSpec = tween(900, easing = EaseOutCubic), label = "source_bar")
-    Row(verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Icon(imageVector = icon, contentDescription = label,
             tint = NeonTeal, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(8.dp))
@@ -554,8 +534,7 @@ fun RecentAlertsSection(alerts: List<ThreatAlert>) {
                         tint = NeonTeal, modifier = Modifier.size(16.dp))
                 }
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(text = "Live Activity Feed",
-                    style = MaterialTheme.typography.titleMedium,
+                Text(text = "Live Activity Feed", style = MaterialTheme.typography.titleMedium,
                     color = TextPrimary, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.height(16.dp))
@@ -584,8 +563,7 @@ fun RecentAlertsSection(alerts: List<ThreatAlert>) {
                                 .background(color = accentColor, shape = RoundedCornerShape(
                                     topStart = 14.dp, bottomStart = 14.dp)))
                             Spacer(modifier = Modifier.width(14.dp))
-                            Column(modifier = Modifier.weight(1f)
-                                .padding(vertical = 12.dp)) {
+                            Column(modifier = Modifier.weight(1f).padding(vertical = 12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(text = alert.url, color = TextPrimary,
                                         fontWeight = FontWeight.SemiBold, maxLines = 1,
@@ -606,8 +584,7 @@ fun RecentAlertsSection(alerts: List<ThreatAlert>) {
                                         Text(text = alert.source, color = accentColor,
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.padding(
-                                                horizontal = 7.dp, vertical = 3.dp))
+                                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp))
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(text = alert.timeAgo, color = TextSecondary,
@@ -651,8 +628,7 @@ private fun EmptyStateNote(message: String) {
         Icon(imageVector = Icons.Default.Info, contentDescription = null,
             tint = NeonTeal.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = message, color = TextSecondary,
-            style = MaterialTheme.typography.bodySmall)
+        Text(text = message, color = TextSecondary, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -677,16 +653,12 @@ private fun PermissionStatusCard(isBrowserRoleEnabled: Boolean,
                                  isSmartModeEnabled: Boolean, context: Context) {
     Surface(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
         color = CardBackground, shape = RoundedCornerShape(20.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp, WarningYellow.copy(alpha = 0.4f))) {
-        Row(modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Warning, null, tint = WarningYellow,
-                modifier = Modifier.size(28.dp))
+        border = androidx.compose.foundation.BorderStroke(1.dp, WarningYellow.copy(alpha = 0.4f))) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Warning, null, tint = WarningYellow, modifier = Modifier.size(28.dp))
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Protection Limited", color = TextPrimary,
-                    fontWeight = FontWeight.Bold,
+                Text(text = "Protection Limited", color = TextPrimary, fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyMedium)
                 Text(text = "Enable Link Protection for full security.",
                     color = TextSecondary, style = MaterialTheme.typography.bodySmall)
@@ -780,11 +752,9 @@ private fun ProfileDetailsDialog(
                             scannedRecords, blockedRecords)
                         isExporting = false
                         result.onSuccess { location ->
-                            Toast.makeText(context, "PDF saved: $location",
-                                Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "PDF saved: $location", Toast.LENGTH_LONG).show()
                         }.onFailure {
-                            Toast.makeText(context, "Failed to export PDF",
-                                Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "Failed to export PDF", Toast.LENGTH_LONG).show()
                         }
                     }
                 }, enabled = !isExporting, modifier = Modifier.fillMaxWidth()) {
@@ -817,8 +787,7 @@ private fun ProfileDetailsDialog(
                     modifier = Modifier.fillMaxWidth())
                 Button(onClick = {
                     sendReportEmail(context, draftName, reportUrl, reportDescription)
-                }, enabled = reportUrl.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth()) {
+                }, enabled = reportUrl.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Default.Email, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Send Report Email")
@@ -836,8 +805,7 @@ private fun ProfileDetailsDialog(
 
     if (showUrlPicker) {
         AlertDialog(onDismissRequest = { showUrlPicker = false },
-            title = { Text("Select URL To Report", color = TextPrimary,
-                fontWeight = FontWeight.Bold) },
+            title = { Text("Select URL To Report", color = TextPrimary, fontWeight = FontWeight.Bold) },
             text = {
                 if (selectableRecords.isEmpty()) {
                     Text("No scanned URLs available.", color = TextSecondary)
@@ -859,9 +827,7 @@ private fun ProfileDetailsDialog(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showUrlPicker = false }) {
-                    Text("Close", color = NeonTeal)
-                }
+                TextButton(onClick = { showUrlPicker = false }) { Text("Close", color = NeonTeal) }
             },
             containerColor = CardBackground,
             titleContentColor = TextPrimary,
@@ -908,8 +874,7 @@ private fun MetricDetailItem(item: AllScannedUrl, showStatusBadge: Boolean) {
         if (showStatusBadge) {
             Surface(shape = RoundedCornerShape(999.dp),
                 color = statusColor.copy(alpha = 0.16f),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp, statusColor.copy(alpha = 0.4f))) {
+                border = androidx.compose.foundation.BorderStroke(1.dp, statusColor.copy(alpha = 0.4f))) {
                 Text(statusLabel, color = statusColor,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
@@ -950,8 +915,9 @@ private fun requestBrowserRole(context: Context) {
     }
 }
 
-private suspend fun exportDatabaseHistoryPdf(context: Context, userName: String,
-                                             scannedRecords: List<AllScannedUrl>, blockedRecords: List<BlockedUrl>
+private suspend fun exportDatabaseHistoryPdf(
+    context: Context, userName: String,
+    scannedRecords: List<AllScannedUrl>, blockedRecords: List<BlockedUrl>
 ): Result<String> = withContext(Dispatchers.IO) {
     runCatching {
         val fileName = "zerothreat_history_${
@@ -988,7 +954,7 @@ private suspend fun exportDatabaseHistoryPdf(context: Context, userName: String,
             val margin = 36f; val contentBottom = pageHeight - margin; val lineHeight = 17f
             val tableXStart = margin; val idColWidth = 48f; val dateColWidth = 130f
             val urlColWidth = 275f
-            val resultColWidth = pageWidth-(margin*2)-idColWidth-dateColWidth-urlColWidth
+            val resultColWidth = pageWidth - (margin * 2) - idColWidth - dateColWidth - urlColWidth
             val tableXId = tableXStart; val tableXDate = tableXId + idColWidth
             val tableXUrl = tableXDate + dateColWidth; val tableXResult = tableXUrl + urlColWidth
             val tableXEnd = tableXResult + resultColWidth; val rowHeight = 22f
@@ -1003,17 +969,17 @@ private suspend fun exportDatabaseHistoryPdf(context: Context, userName: String,
             fun drawTableHeader() {
                 canvas.drawRect(tableXStart, y, tableXEnd, y + rowHeight, headerFillPaint)
                 canvas.drawLine(tableXStart, y, tableXEnd, y, tableLinePaint)
-                canvas.drawLine(tableXStart, y+rowHeight, tableXEnd, y+rowHeight, tableLinePaint)
-                canvas.drawLine(tableXStart, y, tableXStart, y+rowHeight, tableLinePaint)
-                canvas.drawLine(tableXDate, y, tableXDate, y+rowHeight, tableLinePaint)
-                canvas.drawLine(tableXUrl, y, tableXUrl, y+rowHeight, tableLinePaint)
-                canvas.drawLine(tableXResult, y, tableXResult, y+rowHeight, tableLinePaint)
-                canvas.drawLine(tableXEnd, y, tableXEnd, y+rowHeight, tableLinePaint)
+                canvas.drawLine(tableXStart, y + rowHeight, tableXEnd, y + rowHeight, tableLinePaint)
+                canvas.drawLine(tableXStart, y, tableXStart, y + rowHeight, tableLinePaint)
+                canvas.drawLine(tableXDate, y, tableXDate, y + rowHeight, tableLinePaint)
+                canvas.drawLine(tableXUrl, y, tableXUrl, y + rowHeight, tableLinePaint)
+                canvas.drawLine(tableXResult, y, tableXResult, y + rowHeight, tableLinePaint)
+                canvas.drawLine(tableXEnd, y, tableXEnd, y + rowHeight, tableLinePaint)
                 val textY = y + 15f
-                canvas.drawText("ID", tableXId+6f, textY, tableHeaderPaint)
-                canvas.drawText("Scanned Date", tableXDate+6f, textY, tableHeaderPaint)
-                canvas.drawText("URL", tableXUrl+6f, textY, tableHeaderPaint)
-                canvas.drawText("Result", tableXResult+6f, textY, tableHeaderPaint)
+                canvas.drawText("ID", tableXId + 6f, textY, tableHeaderPaint)
+                canvas.drawText("Scanned Date", tableXDate + 6f, textY, tableHeaderPaint)
+                canvas.drawText("URL", tableXUrl + 6f, textY, tableHeaderPaint)
+                canvas.drawText("Result", tableXResult + 6f, textY, tableHeaderPaint)
                 y += rowHeight
             }
 
@@ -1044,17 +1010,17 @@ private suspend fun exportDatabaseHistoryPdf(context: Context, userName: String,
                 historyRows.forEach { row ->
                     if (y + rowHeight > contentBottom) startNewPage(sectionTitle)
                     canvas.drawLine(tableXStart, y, tableXEnd, y, tableLinePaint)
-                    canvas.drawLine(tableXStart, y+rowHeight, tableXEnd, y+rowHeight, tableLinePaint)
-                    canvas.drawLine(tableXStart, y, tableXStart, y+rowHeight, tableLinePaint)
-                    canvas.drawLine(tableXDate, y, tableXDate, y+rowHeight, tableLinePaint)
-                    canvas.drawLine(tableXUrl, y, tableXUrl, y+rowHeight, tableLinePaint)
-                    canvas.drawLine(tableXResult, y, tableXResult, y+rowHeight, tableLinePaint)
-                    canvas.drawLine(tableXEnd, y, tableXEnd, y+rowHeight, tableLinePaint)
+                    canvas.drawLine(tableXStart, y + rowHeight, tableXEnd, y + rowHeight, tableLinePaint)
+                    canvas.drawLine(tableXStart, y, tableXStart, y + rowHeight, tableLinePaint)
+                    canvas.drawLine(tableXDate, y, tableXDate, y + rowHeight, tableLinePaint)
+                    canvas.drawLine(tableXUrl, y, tableXUrl, y + rowHeight, tableLinePaint)
+                    canvas.drawLine(tableXResult, y, tableXResult, y + rowHeight, tableLinePaint)
+                    canvas.drawLine(tableXEnd, y, tableXEnd, y + rowHeight, tableLinePaint)
                     val rowTextY = y + 15f
-                    canvas.drawText(row.id.toString(), tableXId+6f, rowTextY, tableCellPaint)
-                    canvas.drawText(dateFormatter.format(Date(row.timestamp)), tableXDate+6f, rowTextY, tableCellPaint)
-                    canvas.drawText(ellipsize(row.url, 54), tableXUrl+6f, rowTextY, tableCellPaint)
-                    canvas.drawText(ellipsize(row.result, 11), tableXResult+6f, rowTextY, tableCellPaint)
+                    canvas.drawText(row.id.toString(), tableXId + 6f, rowTextY, tableCellPaint)
+                    canvas.drawText(dateFormatter.format(Date(row.timestamp)), tableXDate + 6f, rowTextY, tableCellPaint)
+                    canvas.drawText(ellipsize(row.url, 54), tableXUrl + 6f, rowTextY, tableCellPaint)
+                    canvas.drawText(ellipsize(row.result, 11), tableXResult + 6f, rowTextY, tableCellPaint)
                     y += rowHeight
                 }
             }
