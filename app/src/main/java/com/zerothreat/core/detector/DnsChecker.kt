@@ -21,7 +21,8 @@ class DnsChecker {
                 return@withContext DnsCheckResult(
                     exists = false,
                     message = "Invalid URL format",
-                    score = 50
+                    score = RiskScorePolicy.INVALID_URL,
+                    failureReason = DnsFailureReason.INVALID_URL
                 )
             }
 
@@ -32,7 +33,8 @@ class DnsChecker {
             return@withContext DnsCheckResult(
                 exists = true,
                 message = "URL exists - DNS resolved successfully",
-                score = 0
+                score = 0,
+                failureReason = DnsFailureReason.NONE
             )
 
         } catch (e: UnknownHostException) {
@@ -40,14 +42,16 @@ class DnsChecker {
             return@withContext DnsCheckResult(
                 exists = false,
                 message = "URL does not exist - DNS resolution failed",
-                score = 75 // Suspicious score for non-existent domains
+                score = RiskScorePolicy.DNS_DOMAIN_NOT_FOUND,
+                failureReason = DnsFailureReason.DOMAIN_NOT_FOUND
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error checking URL: ${e.message}", e)
             return@withContext DnsCheckResult(
                 exists = false,
                 message = "Error checking URL: ${e.message}",
-                score = 50 // Moderate score for errors
+                score = RiskScorePolicy.DNS_LOOKUP_ERROR,
+                failureReason = DnsFailureReason.LOOKUP_ERROR
             )
         }
     }
@@ -72,6 +76,14 @@ class DnsChecker {
 data class DnsCheckResult(
     val exists: Boolean,
     val message: String,
-    val score: Int // 0-100: how suspicious it is if it doesn't exist
+    val score: Int, // 0-100 risk percentage
+    val failureReason: DnsFailureReason = DnsFailureReason.NONE
 )
+
+enum class DnsFailureReason {
+    NONE,
+    INVALID_URL,
+    DOMAIN_NOT_FOUND,
+    LOOKUP_ERROR
+}
 

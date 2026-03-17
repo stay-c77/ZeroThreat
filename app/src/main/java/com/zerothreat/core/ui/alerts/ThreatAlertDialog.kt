@@ -44,6 +44,11 @@ private fun headline(threatLevel: PhishingResult, score: Int): String = when (th
     }
 }
 
+enum class ThreatAlertMode {
+    DEFAULT,
+    DNS_NOT_FOUND
+}
+
 // ── Composable ────────────────────────────────────────────────────────────────
 
 @Composable
@@ -53,6 +58,7 @@ fun ThreatAlertDialog(
     score: Int = 0,
     detectionTag: String = "",
     reasonBullets: List<String> = emptyList(),
+    alertMode: ThreatAlertMode = ThreatAlertMode.DEFAULT,
     onBlock: () -> Unit,
     onIgnore: () -> Unit,
     onContinue: () -> Unit = onIgnore,
@@ -67,6 +73,7 @@ fun ThreatAlertDialog(
         PhishingResult.SUSPICIOUS -> WarningYellow
         PhishingResult.PHISHING   -> DangerRed
     }
+    val isDnsNotFound = alertMode == ThreatAlertMode.DNS_NOT_FOUND
 
     val domain = parseDomain(url)
     val path   = parsePath(url)
@@ -102,7 +109,7 @@ fun ThreatAlertDialog(
 
                 // ── Level 1: Adaptive headline ────────────────────────────────
                 Text(
-                    text = headline(threatLevel, score),
+                    text = if (isDnsNotFound) "Domain not found" else headline(threatLevel, score),
                     style = MaterialTheme.typography.headlineSmall,
                     color = accentColor,
                     fontWeight = FontWeight.Bold,
@@ -149,7 +156,7 @@ fun ThreatAlertDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // ── Risk score badge ──────────────────────────────────────────
-                if (threatLevel != PhishingResult.SAFE && score > 0) {
+                if (!isDnsNotFound && threatLevel != PhishingResult.SAFE && score > 0) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = accentColor.copy(alpha = 0.12f),
@@ -167,7 +174,7 @@ fun ThreatAlertDialog(
                 }
 
                 // ── Detection tag ─────────────────────────────────────────────
-                if (detectionTag.isNotEmpty()) {
+                if (!isDnsNotFound && detectionTag.isNotEmpty()) {
                     Text(
                         text = "Detection: $detectionTag",
                         style = MaterialTheme.typography.labelSmall,
@@ -179,7 +186,7 @@ fun ThreatAlertDialog(
                 }
 
                 // ── Reason bullets ────────────────────────────────────────────
-                if (reasonBullets.isNotEmpty()) {
+                if (!isDnsNotFound && reasonBullets.isNotEmpty()) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.Start
@@ -206,7 +213,25 @@ fun ThreatAlertDialog(
                 }
 
                 // ── Buttons ───────────────────────────────────────────────────
-                if (threatLevel == PhishingResult.SAFE) {
+                if (isDnsNotFound) {
+
+                    OutlinedButton(
+                        onClick = onIgnore,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(Spacing.Button.height),
+                        shape = RoundedCornerShape(Spacing.Button.cornerRadius),
+                        border = BorderStroke(1.dp, TextSecondary.copy(alpha = 0.35f))
+                    ) {
+                        Text(
+                            text = "Close",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                } else if (threatLevel == PhishingResult.SAFE) {
 
                     // Safe: single OK button
                     Button(

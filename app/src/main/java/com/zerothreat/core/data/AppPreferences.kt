@@ -155,7 +155,7 @@ class AppPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_PROFILE_NAME, value).apply()
 
     var profileRole: String
-        get() = prefs.getString(KEY_PROFILE_ROLE, "Security Analyst") ?: "Security Analyst"
+        get() = prefs.getString(KEY_PROFILE_ROLE, "") ?: ""
         set(value) = prefs.edit().putString(KEY_PROFILE_ROLE, value).apply()
 
     fun clearAll() {

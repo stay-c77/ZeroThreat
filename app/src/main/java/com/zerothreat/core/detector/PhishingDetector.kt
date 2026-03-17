@@ -145,8 +145,8 @@ object PhishingDetector {
         if (cleanDomain.isBlank()) {
             val report = AnalysisReport(
                 result = PhishingResult.SUSPICIOUS,
-                score = 45,
-                description = "45% suspicious - Invalid or incomplete link"
+                score = RiskScorePolicy.INVALID_URL,
+                description = "${RiskScorePolicy.INVALID_URL}% suspicious - Invalid or incomplete link"
             )
             if (shouldPersist) {
                 logToDatabase(context, domaininput, cleanDomain, report, source)
@@ -383,7 +383,7 @@ object PhishingDetector {
         val basicLexicalFeatures = extractBasicLexicalFeatures(domaininput, parsed)
         score += scoreBasicLexicalFeatures(basicLexicalFeatures, reasons)
 
-        val normalizedScore = score.coerceIn(0, 100)
+        val hasCriticalSignal = homographDetected
         val hasStrongBrandSignal = cappedBrandScore >= 24
         val hasKeywordSignal = keywordPoints > 0
         val hasInfraSignal =
@@ -398,6 +398,11 @@ object PhishingDetector {
             hasRedirectSignal,
             homographDetected
         ).count { it }
+        val normalizedScore = RiskScorePolicy.normalizeHeuristicScore(
+            rawScore = score,
+            phishingSignalCount = phishingSignalCount,
+            hasCriticalSignal = hasCriticalSignal
+        )
 
         val finalResult = when {
             normalizedScore >= 80 && phishingSignalCount >= 2 -> PhishingResult.PHISHING
