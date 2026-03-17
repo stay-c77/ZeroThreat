@@ -32,6 +32,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.rememberNavController
 import com.zerothreat.core.detector.PhishingResult
 import com.zerothreat.core.ui.alerts.ThreatAlertDialog
+import com.zerothreat.core.ui.alerts.ThreatAlertMode
 import com.zerothreat.core.ui.components.SecurityPulseAnimation
 import com.zerothreat.core.ui.theme.*
 import kotlinx.coroutines.delay
@@ -236,6 +237,7 @@ fun ManualCheckScreen(
             score         = result.score,
             detectionTag  = alertData.detectionTag,
             reasonBullets = alertData.reasonBullets,
+            alertMode     = if (result.dnsCheckFailed) ThreatAlertMode.DNS_NOT_FOUND else ThreatAlertMode.DEFAULT,
             onBlock       = { onDone() },
             onIgnore      = { onDone() },
             onContinue    = { onDone() },

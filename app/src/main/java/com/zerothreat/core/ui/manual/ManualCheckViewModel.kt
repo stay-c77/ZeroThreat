@@ -10,6 +10,7 @@ import com.zerothreat.core.data.repository.UrlRepository
 import com.zerothreat.core.detector.DnsChecker
 import com.zerothreat.core.detector.PhishingDetector
 import com.zerothreat.core.detector.PhishingResult
+import com.zerothreat.core.detector.RiskScorePolicy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,7 +49,7 @@ class ManualCheckViewModel(application: Application) : AndroidViewModel(applicat
                     url = url,
                     domain = PhishingDetector.normalizeInput(url).ifBlank { "invalid-url" },
                     result = PhishingResult.SUSPICIOUS,
-                    score = 50,
+                    score = RiskScorePolicy.INVALID_URL,
                     note = "Invalid URL format",
                     threatType = "Invalid URL"
                 )
@@ -57,7 +58,7 @@ class ManualCheckViewModel(application: Application) : AndroidViewModel(applicat
                     _scanResult.value = ScanEvent(
                         url = url,
                         result = PhishingResult.SUSPICIOUS,
-                        score = 50,
+                        score = RiskScorePolicy.INVALID_URL,
                         description = "Invalid URL format",
                         dnsCheckFailed = false
                     )

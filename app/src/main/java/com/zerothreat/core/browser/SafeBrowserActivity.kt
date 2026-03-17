@@ -39,6 +39,7 @@ import com.zerothreat.core.detector.DnsChecker
 import com.zerothreat.core.detector.PhishingDetector
 import com.zerothreat.core.detector.PhishingResult
 import com.zerothreat.core.ui.alerts.ThreatAlertDialog
+import com.zerothreat.core.ui.alerts.ThreatAlertMode
 import com.zerothreat.core.ui.theme.*
 import java.net.URI
 import kotlin.concurrent.thread
@@ -436,7 +437,9 @@ private fun ZeroThreatScanScreen(
                 is ScanState.DnsFailed -> scanState.url
                 else                   -> ""
             }
-            ScanningOverlay(url = urlForDisplay)
+            if (scanState is ScanState.Scanning) {
+                ScanningOverlay(url = urlForDisplay)
+            }
 
             when (scanState) {
 
@@ -492,6 +495,7 @@ private fun ZeroThreatScanScreen(
                             "This domain could not be resolved",
                             "The link may be inactive or malicious"
                         ),
+                        alertMode  = ThreatAlertMode.DNS_NOT_FOUND,
                         onBlock    = { onBlockDns(scanState.url, scanState.domain, scanState.dnsResult, scanState.source) },
                         onIgnore   = { onExit() },
                         onContinue = { onOpenAnyway(scanState.url) }, // "Continue Anyway" → open

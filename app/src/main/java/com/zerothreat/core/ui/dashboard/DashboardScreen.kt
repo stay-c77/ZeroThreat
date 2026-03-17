@@ -80,7 +80,6 @@ fun DashboardScreen(
     val context = LocalContext.current
     val appPreferences = remember { AppPreferences(context) }
     var profileName by remember { mutableStateOf(appPreferences.profileName) }
-    var profileRole by remember { mutableStateOf(appPreferences.profileRole) }
     var isBrowserRoleEnabled by remember { mutableStateOf(checkBrowserRoleEnabled(context)) }
     var isSmartModeEnabled by remember { mutableStateOf(appPreferences.smartModeEnabled) }
 
@@ -98,7 +97,7 @@ fun DashboardScreen(
         contentPadding = PaddingValues(bottom = 120.dp, top = 16.dp)
     ) {
         item {
-            UserGreetingCard(userName = profileName, userRole = profileRole,
+            UserGreetingCard(userName = profileName,
                 onAvatarClick = { showProfileDialog = true },
                 onEditClick = { showProfileDialog = true })
         }
@@ -129,11 +128,11 @@ fun DashboardScreen(
     }
 
     if (showProfileDialog) {
-        ProfileDetailsDialog(userName = profileName, userRole = profileRole,
+        ProfileDetailsDialog(userName = profileName,
             scannedRecords = storedLinks, blockedRecords = blockedLinks,
-            onSaveProfile = { newName, newRole ->
-                profileName = newName; profileRole = newRole
-                appPreferences.profileName = newName; appPreferences.profileRole = newRole
+            onSaveProfile = { newName ->
+                profileName = newName
+                appPreferences.profileName = newName
             },
             onDismiss = { showProfileDialog = false })
     }
@@ -142,7 +141,7 @@ fun DashboardScreen(
 // ==================== SECTION 1A: User Greeting Card ====================
 @Composable
 fun UserGreetingCard(
-    userName: String, userRole: String,
+    userName: String,
     onAvatarClick: () -> Unit, onEditClick: () -> Unit
 ) {
     val greeting = remember {
@@ -177,8 +176,6 @@ fun UserGreetingCard(
                         style = MaterialTheme.typography.labelMedium)
                     Text(text = userName, color = TextPrimary, fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium)
-                    Text(text = userRole, color = TextSecondary,
-                        style = MaterialTheme.typography.labelSmall)
                 }
             }
             Icon(imageVector = Icons.Default.ChevronRight, contentDescription = null,
@@ -376,9 +373,9 @@ fun MetricCard(title: String, value: String, icon: ImageVector,
 }
 
 @Composable
-fun UserProfileHeader(userName: String, userRole: String,
+fun UserProfileHeader(userName: String,
                       onAvatarClick: () -> Unit, onEditClick: () -> Unit) {
-    UserGreetingCard(userName, userRole, onAvatarClick, onEditClick)
+    UserGreetingCard(userName, onAvatarClick, onEditClick)
 }
 
 // ==================== SECTION 3: Quick Action Strip ====================
@@ -698,14 +695,13 @@ private fun PermissionStatusCard(isBrowserRoleEnabled: Boolean,
 // ==================== Profile Dialog ====================
 @Composable
 private fun ProfileDetailsDialog(
-    userName: String, userRole: String,
+    userName: String,
     scannedRecords: List<AllScannedUrl>, blockedRecords: List<BlockedUrl>,
-    onSaveProfile: (String, String) -> Unit, onDismiss: () -> Unit
+    onSaveProfile: (String) -> Unit, onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var draftName by remember(userName) { mutableStateOf(userName) }
-    var draftRole by remember(userRole) { mutableStateOf(userRole) }
     var isEditing by remember { mutableStateOf(false) }
     var isExporting by remember { mutableStateOf(false) }
     var reportUrl by remember { mutableStateOf("") }
@@ -731,21 +727,16 @@ private fun ProfileDetailsDialog(
                     OutlinedTextField(value = draftName, onValueChange = { draftName = it },
                         label = { Text("Name") }, singleLine = true,
                         modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(value = draftRole, onValueChange = { draftRole = it },
-                        label = { Text("Role / Bio") }, singleLine = true,
-                        modifier = Modifier.fillMaxWidth())
                     Button(onClick = {
                         val finalName = draftName.trim().ifBlank { "ZeroThreat User" }
-                        val finalRole = draftRole.trim().ifBlank { "Security Analyst" }
-                        onSaveProfile(finalName, finalRole)
-                        draftName = finalName; draftRole = finalRole; isEditing = false
+                        onSaveProfile(finalName)
+                        draftName = finalName
+                        isEditing = false
                     }, modifier = Modifier.fillMaxWidth()) { Text("Save Details") }
                 } else {
                     Text(draftName, color = TextPrimary,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold)
-                    Text(draftRole, color = TextSecondary,
-                        style = MaterialTheme.typography.bodySmall)
                     OutlinedButton(onClick = { isEditing = true },
                         modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.Edit, contentDescription = null)
