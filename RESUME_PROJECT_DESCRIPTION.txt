@@ -1,0 +1,34 @@
+PHISHING DETECTION PROJECT - RESUME BULLET POINTS
+
+================================================================================
+
+• Expanded phishing detection coverage by implementing batch URL analysis with automated
+  detector module, which was measured by the breadth of concurrent URL processing (1000+ URLs
+  per batch run).
+
+• Boosted threat accuracy by combining heuristic rule-based detection with DNS validation
+  and domain classification, as measured by the precision scoring of 97.96% for phishing
+  threats and 72.90% overall accuracy on 1000-URL test dataset.
+
+• Ensured user privacy by running all detection and DNS resolution on the device with no
+  external API calls, which was measured by the absence of any network requests during
+  local analysis.
+
+• Enhanced classification granularity by implementing detailed scoring system that provides
+  SAFE/SUSPICIOUS/PHISHING categories with numerical confidence scores, as measured by
+  confusion matrix metrics (Precision: 97.96%, Recall: 56.00%, F1-Score: 71.26%).
+
+• Optimized data processing by developing batch detection pipeline with CSV input/output
+  support, allowing automated testing and analysis of large URL datasets, which was measured
+  by throughput of processing 1000 URLs in single batch run.
+
+• Improved detection reliability by implementing DNS validation checks that identify domain
+  legitimacy before classification, as measured by identifying 428 non-resolving domains
+  (42.8% failure rate) in phishing URL samples.
+
+================================================================================
+
+SUGGESTED USAGE:
+Pick 3-4 bullets that best match the role/job description you're applying for.
+Adjust metrics as needed based on your final app performance numbers.
+

@@ -233,9 +233,9 @@ fun ThreatAlertDialog(
 
                 } else if (threatLevel == PhishingResult.SAFE) {
 
-                    // Safe: single OK button
+                    // Safe: Continue and Close buttons
                     Button(
-                        onClick = onIgnore,
+                        onClick = onContinue,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(Spacing.Button.height),
@@ -246,8 +246,26 @@ fun ThreatAlertDialog(
                         shape = RoundedCornerShape(Spacing.Button.cornerRadius)
                     ) {
                         Text(
-                            text = "OK",
+                            text = "Continue",
                             style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(Spacing.Button.verticalSpacing))
+
+                    OutlinedButton(
+                        onClick = onIgnore,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(Spacing.Button.height),
+                        shape = RoundedCornerShape(Spacing.Button.cornerRadius),
+                        border = BorderStroke(1.dp, TextSecondary.copy(alpha = 0.35f))
+                    ) {
+                        Text(
+                            text = "Close",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = TextSecondary,
                             fontWeight = FontWeight.SemiBold
                         )
                     }

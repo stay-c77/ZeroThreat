@@ -1,0 +1,8 @@
+Total: 1000
+Detector results: {'SUSPICIOUS': 340, 'SAFE': 657, 'PHISHING': 3}
+TP=336, FP=7, TN=393, FN=264
+Accuracy=72.90%
+Precision(phishing)=97.96%
+Recall(phishing)=56.00%
+Specificity(safe)=98.25%
+F1(phishing)=71.26%
