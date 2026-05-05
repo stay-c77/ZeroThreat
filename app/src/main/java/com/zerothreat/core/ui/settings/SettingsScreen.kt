@@ -100,7 +100,7 @@ fun SettingsScreen(
     var monitorWhatsapp by remember { mutableStateOf(appPreferences.monitorWhatsapp) }
     var monitorInstagram by remember { mutableStateOf(appPreferences.monitorInstagram) }
     var monitorGmail by remember { mutableStateOf(appPreferences.monitorGmail) }
-    var monitorTelegram by remember { mutableStateOf(appPreferences.monitorTelegram) }
+    // Telegram support removed from supported apps UI
     var monitorMessages by remember { mutableStateOf(appPreferences.monitorMessages) }
     val browserOptions = remember(context) { getAvailableBrowsers(context) }
     var showBrowserPicker by remember { mutableStateOf(false) }
@@ -388,27 +388,7 @@ fun SettingsScreen(
                                 }
                             }
                         )
-                        HorizontalDivider(color = TextMuted.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 12.dp))
-                        SettingsToggleItem(
-                            icon = Icons.AutoMirrored.Filled.Send,
-                            title = "Telegram",
-                            description = "Enable Telegram checks",
-                            checked = monitorTelegram,
-                            onCheckedChange = {
-                                if (!it) {
-                                    // Turning OFF - show dialog
-                                    appToDisable = "Telegram"
-                                    showAppDisableDialog = true
-                                } else {
-                                    // Turning ON - enable both
-                                    monitorTelegram = true
-                                    appPreferences.monitorTelegram = true
-                                    appPreferences.telegramNotificationEnabled = true
-                                    appPreferences.telegramOnClickEnabled = true
-                                }
-                            }
-                        )
-                        HorizontalDivider(color = TextMuted.copy(alpha = 0.2f), modifier = Modifier.padding(vertical = 12.dp))
+                        // Telegram removed
                         SettingsToggleItem(
                             icon = Icons.AutoMirrored.Filled.Message,
                             title = "Messages / SMS",
@@ -539,15 +519,7 @@ fun SettingsScreen(
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
-                                "Telegram" -> {
-                                    val cur = appPreferences.telegramNotificationEnabled
-                                    appPreferences.telegramNotificationEnabled = !cur
-                                    Toast.makeText(
-                                        context,
-                                        if (!cur) "$appToDisable notification scanning enabled" else "$appToDisable notification scanning disabled",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
+
                                 "Messages" -> {
                                     val cur = appPreferences.messagesNotificationEnabled
                                     appPreferences.messagesNotificationEnabled = !cur
@@ -570,7 +542,7 @@ fun SettingsScreen(
                             "WhatsApp" -> if (appPreferences.whatsappNotificationEnabled) "Disable Notification" else "Enable Notification"
                             "Instagram" -> if (appPreferences.instagramNotificationEnabled) "Disable Notification" else "Enable Notification"
                             "Gmail" -> if (appPreferences.gmailNotificationEnabled) "Disable Notification" else "Enable Notification"
-                            "Telegram" -> if (appPreferences.telegramNotificationEnabled) "Disable Notification" else "Enable Notification"
+                            // Telegram support removed
                             "Messages" -> if (appPreferences.messagesNotificationEnabled) "Disable Notification" else "Enable Notification"
                             else -> "Toggle Notification"
                         }
@@ -608,15 +580,7 @@ fun SettingsScreen(
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
-                                "Telegram" -> {
-                                    val cur = appPreferences.telegramOnClickEnabled
-                                    appPreferences.telegramOnClickEnabled = !cur
-                                    Toast.makeText(
-                                        context,
-                                        if (!cur) "$appToDisable onClick scanning enabled" else "$appToDisable onClick scanning disabled",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
+
                                 "Messages" -> {
                                     val cur = appPreferences.messagesOnClickEnabled
                                     appPreferences.messagesOnClickEnabled = !cur
@@ -639,7 +603,7 @@ fun SettingsScreen(
                             "WhatsApp" -> if (appPreferences.whatsappOnClickEnabled) "Disable onClick" else "Enable onClick"
                             "Instagram" -> if (appPreferences.instagramOnClickEnabled) "Disable onClick" else "Enable onClick"
                             "Gmail" -> if (appPreferences.gmailOnClickEnabled) "Disable onClick" else "Enable onClick"
-                            "Telegram" -> if (appPreferences.telegramOnClickEnabled) "Disable onClick" else "Enable onClick"
+                            // Telegram support removed
                             "Messages" -> if (appPreferences.messagesOnClickEnabled) "Disable onClick" else "Enable onClick"
                             else -> "Toggle onClick"
                         }
@@ -686,18 +650,7 @@ fun SettingsScreen(
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 }
-                                "Telegram" -> {
-                                    val bothDisabled = !appPreferences.telegramNotificationEnabled && !appPreferences.telegramOnClickEnabled
-                                    monitorTelegram = !bothDisabled
-                                    appPreferences.monitorTelegram = monitorTelegram
-                                    appPreferences.telegramNotificationEnabled = monitorTelegram
-                                    appPreferences.telegramOnClickEnabled = monitorTelegram
-                                    Toast.makeText(
-                                        context,
-                                        if (monitorTelegram) "$appToDisable protection enabled" else "$appToDisable protection completely disabled",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
+
                                 "Messages" -> {
                                     val bothDisabled = !appPreferences.messagesNotificationEnabled && !appPreferences.messagesOnClickEnabled
                                     monitorMessages = !bothDisabled
@@ -724,7 +677,7 @@ fun SettingsScreen(
                             "WhatsApp" -> if (appPreferences.whatsappNotificationEnabled || appPreferences.whatsappOnClickEnabled) "Disable Both" else "Enable Both"
                             "Instagram" -> if (appPreferences.instagramNotificationEnabled || appPreferences.instagramOnClickEnabled) "Disable Both" else "Enable Both"
                             "Gmail" -> if (appPreferences.gmailNotificationEnabled || appPreferences.gmailOnClickEnabled) "Disable Both" else "Enable Both"
-                            "Telegram" -> if (appPreferences.telegramNotificationEnabled || appPreferences.telegramOnClickEnabled) "Disable Both" else "Enable Both"
+
                             "Messages" -> if (appPreferences.messagesNotificationEnabled || appPreferences.messagesOnClickEnabled) "Disable Both" else "Enable Both"
                             else -> "Toggle Both"
                         }
