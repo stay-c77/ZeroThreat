@@ -67,7 +67,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private const val REPORT_EMAIL = "sharoshalonmathew2026@it.ajce.in"
+private const val REPORT_EMAIL = "sharonshalon94@gmail.com"
 
 // ── Protection state enum (UI-only, no backend touch) ────────────────────────
 private enum class ProtectionStatus { PROTECTED, PARTIAL, UNPROTECTED }

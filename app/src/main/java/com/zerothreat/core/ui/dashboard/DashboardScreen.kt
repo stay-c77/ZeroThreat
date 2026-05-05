@@ -63,7 +63,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-private const val REPORT_EMAIL = "sharoshalonmathew2026@it.ajce.in"
+private const val REPORT_EMAIL = "sharonshalon94@gmail.com"
 
 // ==================== MAIN SCREEN ====================
 @Composable
