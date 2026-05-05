@@ -1081,11 +1081,15 @@ private fun sendReportEmail(context: Context, reporterName: String,
         appendLine("Description:")
         appendLine(safeDescription)
     }
-    val emailIntent = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$REPORT_EMAIL")).apply {
-        putExtra(Intent.EXTRA_EMAIL, arrayOf(REPORT_EMAIL))
-        putExtra(Intent.EXTRA_SUBJECT, "ZeroThreat URL Report")
-        putExtra(Intent.EXTRA_TEXT, body)
+    // Use a mailto: URI with encoded subject/body to ensure compatibility with ACTION_SENDTO
+    val mailtoUri = Uri.parse(
+        "mailto:${REPORT_EMAIL}?subject=${Uri.encode("ZeroThreat URL Report")}&body=${Uri.encode(body)}"
+    )
+    val emailIntent = Intent(Intent.ACTION_SENDTO, mailtoUri).apply {
+        // If called from a non-Activity context this flag helps start the email activity
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
+
     try {
         context.startActivity(emailIntent)
     } catch (_: ActivityNotFoundException) {
