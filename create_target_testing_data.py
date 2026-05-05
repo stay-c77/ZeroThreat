@@ -5,6 +5,7 @@ import csv
 import math
 import random
 import re
+import socket
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Sequence, Tuple
@@ -22,6 +23,7 @@ REPO_ROOT = Path('/Users/sharonshalonmathew/Documents/zerothreat-git')
 PHISHTANK_CSV = Path('/Users/sharonshalonmathew/Desktop/phishtank.csv')
 LEGIT_CSV = Path('/Users/sharonshalonmathew/Desktop/legit.csv')
 WHITELIST_CSV = REPO_ROOT / 'app/src/main/assets/whitelists/top-1m.csv'
+DNS_CACHE_CSV = REPO_ROOT / 'dns_check_results_claude.csv'
 OUTPUT_CSV = REPO_ROOT / 'target_testing_data_1000.csv'
 MANIFEST_CSV = REPO_ROOT / 'target_testing_data_1000_manifest.csv'
 REPORT_TXT = REPO_ROOT / 'target_testing_data_1000_report.txt'
@@ -645,6 +647,45 @@ class DetectorModel:
         return bool(url and len(url.strip()) > 5)
 
 
+def domain_resolves(host: str, cache: dict[str, bool]) -> bool:
+    host = (host or '').strip().lower().removeprefix('www.').removesuffix('.')
+    if not host:
+        return False
+    if host in cache:
+        return cache[host]
+    if host == 'localhost':
+        cache[host] = False
+        return False
+    if re.fullmatch(r'[0-9]+(?:\.[0-9]+){3}', host) or ':' in host:
+        cache[host] = False
+        return False
+    try:
+        socket.getaddrinfo(host, None)
+        cache[host] = True
+    except Exception:
+        cache[host] = False
+    return cache[host]
+
+
+def load_dns_cache(path: Path) -> dict[str, bool]:
+    cache: dict[str, bool] = {}
+    if not path.exists():
+        return cache
+    try:
+        with path.open('r', encoding='utf-8', errors='ignore', newline='') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                host = (row.get('extracted_domain') or '').strip().lower().removeprefix('www.').removesuffix('.')
+                if not host:
+                    continue
+                failure_reason = (row.get('failure_reason') or '').strip().upper()
+                message = (row.get('message') or '').strip().lower()
+                cache[host] = failure_reason in {'NONE', 'RESOLVED', 'OK'} or 'resolved successfully' in message
+    except Exception:
+        return cache
+    return cache
+
+
 @dataclass(frozen=True)
 class Candidate:
     url: str
@@ -683,7 +724,7 @@ def shuffled_cycle_indices(n: int, rng: random.Random) -> list[int]:
     return [((start + i * step) % n) for i in range(n)]
 
 
-def pick_from_source(urls: Sequence[str], model: DetectorModel, target_positive: int, target_safe: int, seed: int, source_name: str) -> tuple[list[Candidate], dict[str, int]]:
+def pick_from_source(urls: Sequence[str], model: DetectorModel, target_positive: int, target_safe: int, seed: int, source_name: str, dns_cache: dict[str, bool]) -> tuple[list[Candidate], dict[str, int]]:
     rng = random.Random(seed)
     indices = shuffled_cycle_indices(len(urls), rng)
     selected: list[Candidate] = []
@@ -695,14 +736,19 @@ def pick_from_source(urls: Sequence[str], model: DetectorModel, target_positive:
     for idx in indices:
         scanned += 1
         url = urls[idx]
+        parsed = model._parse_input(url)
         report = model.analyze(url)
         candidate = Candidate(url=url, source=source_name, detector_result=report.result, score=report.score, exact_blacklist_match=report.exact_blacklist_match)
         if candidate.positive and positive < target_positive:
+            if not domain_resolves(parsed.host, dns_cache):
+                continue
             selected.append(candidate)
             positive += 1
             if candidate.exact_100:
                 exact_100 += 1
         elif not candidate.positive and safe < target_safe:
+            if not domain_resolves(parsed.host, dns_cache):
+                continue
             selected.append(candidate)
             safe += 1
         if positive >= target_positive and safe >= target_safe:
@@ -792,6 +838,9 @@ def main() -> None:
     legit_urls = load_source_urls(args.legit_source, 'Domain')
     print(f'  loaded {len(legit_urls)} legit URLs')
 
+    dns_cache = load_dns_cache(DNS_CACHE_CSV)
+    print(f'Loaded DNS cache entries: {len(dns_cache)}')
+
     phishing_selected, phishing_stats = pick_from_source(
         phishing_urls,
         model,
@@ -799,6 +848,7 @@ def main() -> None:
         target_safe=TARGET_FN,
         seed=args.seed,
         source_name='phishtank',
+        dns_cache=dns_cache,
     )
     legit_selected, legit_stats = pick_from_source(
         legit_urls,
@@ -807,6 +857,7 @@ def main() -> None:
         target_safe=TARGET_TN,
         seed=args.seed + 1,
         source_name='legit',
+        dns_cache=dns_cache,
     )
 
     if len(phishing_selected) != TARGET_PHISHING_TOTAL or len(legit_selected) != TARGET_SAFE_TOTAL:
