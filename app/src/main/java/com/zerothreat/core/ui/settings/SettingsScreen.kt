@@ -508,85 +508,210 @@ fun SettingsScreen(
             },
             confirmButton = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Notification toggle (shows Enable/Disable depending on current state)
                     TextButton(
                         onClick = {
-                            // Disable Notification only
-                            when (appToDisable) {
-                                "WhatsApp" -> appPreferences.whatsappNotificationEnabled = false
-                                "Instagram" -> appPreferences.instagramNotificationEnabled = false
-                                "Gmail" -> appPreferences.gmailNotificationEnabled = false
-                                "Telegram" -> appPreferences.telegramNotificationEnabled = false
-                                "Messages" -> appPreferences.messagesNotificationEnabled = false
-                            }
-                            showAppDisableDialog = false
-                            Toast.makeText(context, "$appToDisable notification scanning disabled", Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(
-                            containerColor = PureWhite,
-                            contentColor = PureBlack
-                        )
-                    ) {
-                        Text("Disable Notification")
-                    }
-                    TextButton(
-                        onClick = {
-                            // Disable onClick only
-                            when (appToDisable) {
-                                "WhatsApp" -> appPreferences.whatsappOnClickEnabled = false
-                                "Instagram" -> appPreferences.instagramOnClickEnabled = false
-                                "Gmail" -> appPreferences.gmailOnClickEnabled = false
-                                "Telegram" -> appPreferences.telegramOnClickEnabled = false
-                                "Messages" -> appPreferences.messagesOnClickEnabled = false
-                            }
-                            showAppDisableDialog = false
-                            Toast.makeText(context, "$appToDisable onClick scanning disabled", Toast.LENGTH_SHORT).show()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.textButtonColors(
-                            containerColor = PureWhite,
-                            contentColor = PureBlack
-                        )
-                    ) {
-                        Text("Disable onClick")
-                    }
-                    TextButton(
-                        onClick = {
-                            // Disable both
                             when (appToDisable) {
                                 "WhatsApp" -> {
-                                    monitorWhatsapp = false
-                                    appPreferences.monitorWhatsapp = false
-                                    appPreferences.whatsappNotificationEnabled = false
-                                    appPreferences.whatsappOnClickEnabled = false
+                                    val cur = appPreferences.whatsappNotificationEnabled
+                                    appPreferences.whatsappNotificationEnabled = !cur
+                                    Toast.makeText(
+                                        context,
+                                        if (!cur) "$appToDisable notification scanning enabled" else "$appToDisable notification scanning disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                                 "Instagram" -> {
-                                    monitorInstagram = false
-                                    appPreferences.monitorInstagram = false
-                                    appPreferences.instagramNotificationEnabled = false
-                                    appPreferences.instagramOnClickEnabled = false
+                                    val cur = appPreferences.instagramNotificationEnabled
+                                    appPreferences.instagramNotificationEnabled = !cur
+                                    Toast.makeText(
+                                        context,
+                                        if (!cur) "$appToDisable notification scanning enabled" else "$appToDisable notification scanning disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                                 "Gmail" -> {
-                                    monitorGmail = false
-                                    appPreferences.monitorGmail = false
-                                    appPreferences.gmailNotificationEnabled = false
-                                    appPreferences.gmailOnClickEnabled = false
+                                    val cur = appPreferences.gmailNotificationEnabled
+                                    appPreferences.gmailNotificationEnabled = !cur
+                                    Toast.makeText(
+                                        context,
+                                        if (!cur) "$appToDisable notification scanning enabled" else "$appToDisable notification scanning disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                                 "Telegram" -> {
-                                    monitorTelegram = false
-                                    appPreferences.monitorTelegram = false
-                                    appPreferences.telegramNotificationEnabled = false
-                                    appPreferences.telegramOnClickEnabled = false
+                                    val cur = appPreferences.telegramNotificationEnabled
+                                    appPreferences.telegramNotificationEnabled = !cur
+                                    Toast.makeText(
+                                        context,
+                                        if (!cur) "$appToDisable notification scanning enabled" else "$appToDisable notification scanning disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                                 "Messages" -> {
-                                    monitorMessages = false
-                                    appPreferences.monitorMessages = false
-                                    appPreferences.messagesNotificationEnabled = false
-                                    appPreferences.messagesOnClickEnabled = false
+                                    val cur = appPreferences.messagesNotificationEnabled
+                                    appPreferences.messagesNotificationEnabled = !cur
+                                    Toast.makeText(
+                                        context,
+                                        if (!cur) "$appToDisable notification scanning enabled" else "$appToDisable notification scanning disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             }
                             showAppDisableDialog = false
-                            Toast.makeText(context, "$appToDisable protection completely disabled", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.textButtonColors(
+                            containerColor = PureWhite,
+                            contentColor = PureBlack
+                        )
+                    ) {
+                        val notifLabel = when (appToDisable) {
+                            "WhatsApp" -> if (appPreferences.whatsappNotificationEnabled) "Disable Notification" else "Enable Notification"
+                            "Instagram" -> if (appPreferences.instagramNotificationEnabled) "Disable Notification" else "Enable Notification"
+                            "Gmail" -> if (appPreferences.gmailNotificationEnabled) "Disable Notification" else "Enable Notification"
+                            "Telegram" -> if (appPreferences.telegramNotificationEnabled) "Disable Notification" else "Enable Notification"
+                            "Messages" -> if (appPreferences.messagesNotificationEnabled) "Disable Notification" else "Enable Notification"
+                            else -> "Toggle Notification"
+                        }
+                        Text(notifLabel)
+                    }
+
+                    // onClick toggle (shows Enable/Disable depending on current state)
+                    TextButton(
+                        onClick = {
+                            when (appToDisable) {
+                                "WhatsApp" -> {
+                                    val cur = appPreferences.whatsappOnClickEnabled
+                                    appPreferences.whatsappOnClickEnabled = !cur
+                                    Toast.makeText(
+                                        context,
+                                        if (!cur) "$appToDisable onClick scanning enabled" else "$appToDisable onClick scanning disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                "Instagram" -> {
+                                    val cur = appPreferences.instagramOnClickEnabled
+                                    appPreferences.instagramOnClickEnabled = !cur
+                                    Toast.makeText(
+                                        context,
+                                        if (!cur) "$appToDisable onClick scanning enabled" else "$appToDisable onClick scanning disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                "Gmail" -> {
+                                    val cur = appPreferences.gmailOnClickEnabled
+                                    appPreferences.gmailOnClickEnabled = !cur
+                                    Toast.makeText(
+                                        context,
+                                        if (!cur) "$appToDisable onClick scanning enabled" else "$appToDisable onClick scanning disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                "Telegram" -> {
+                                    val cur = appPreferences.telegramOnClickEnabled
+                                    appPreferences.telegramOnClickEnabled = !cur
+                                    Toast.makeText(
+                                        context,
+                                        if (!cur) "$appToDisable onClick scanning enabled" else "$appToDisable onClick scanning disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                "Messages" -> {
+                                    val cur = appPreferences.messagesOnClickEnabled
+                                    appPreferences.messagesOnClickEnabled = !cur
+                                    Toast.makeText(
+                                        context,
+                                        if (!cur) "$appToDisable onClick scanning enabled" else "$appToDisable onClick scanning disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                            showAppDisableDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.textButtonColors(
+                            containerColor = PureWhite,
+                            contentColor = PureBlack
+                        )
+                    ) {
+                        val onClickLabel = when (appToDisable) {
+                            "WhatsApp" -> if (appPreferences.whatsappOnClickEnabled) "Disable onClick" else "Enable onClick"
+                            "Instagram" -> if (appPreferences.instagramOnClickEnabled) "Disable onClick" else "Enable onClick"
+                            "Gmail" -> if (appPreferences.gmailOnClickEnabled) "Disable onClick" else "Enable onClick"
+                            "Telegram" -> if (appPreferences.telegramOnClickEnabled) "Disable onClick" else "Enable onClick"
+                            "Messages" -> if (appPreferences.messagesOnClickEnabled) "Disable onClick" else "Enable onClick"
+                            else -> "Toggle onClick"
+                        }
+                        Text(onClickLabel)
+                    }
+
+                    // Disable/Enable Both
+                    TextButton(
+                        onClick = {
+                            when (appToDisable) {
+                                "WhatsApp" -> {
+                                    val bothDisabled = !appPreferences.whatsappNotificationEnabled && !appPreferences.whatsappOnClickEnabled
+                                    monitorWhatsapp = !bothDisabled
+                                    appPreferences.monitorWhatsapp = monitorWhatsapp
+                                    appPreferences.whatsappNotificationEnabled = monitorWhatsapp
+                                    appPreferences.whatsappOnClickEnabled = monitorWhatsapp
+                                    Toast.makeText(
+                                        context,
+                                        if (monitorWhatsapp) "$appToDisable protection enabled" else "$appToDisable protection completely disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                "Instagram" -> {
+                                    val bothDisabled = !appPreferences.instagramNotificationEnabled && !appPreferences.instagramOnClickEnabled
+                                    monitorInstagram = !bothDisabled
+                                    appPreferences.monitorInstagram = monitorInstagram
+                                    appPreferences.instagramNotificationEnabled = monitorInstagram
+                                    appPreferences.instagramOnClickEnabled = monitorInstagram
+                                    Toast.makeText(
+                                        context,
+                                        if (monitorInstagram) "$appToDisable protection enabled" else "$appToDisable protection completely disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                "Gmail" -> {
+                                    val bothDisabled = !appPreferences.gmailNotificationEnabled && !appPreferences.gmailOnClickEnabled
+                                    monitorGmail = !bothDisabled
+                                    appPreferences.monitorGmail = monitorGmail
+                                    appPreferences.gmailNotificationEnabled = monitorGmail
+                                    appPreferences.gmailOnClickEnabled = monitorGmail
+                                    Toast.makeText(
+                                        context,
+                                        if (monitorGmail) "$appToDisable protection enabled" else "$appToDisable protection completely disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                "Telegram" -> {
+                                    val bothDisabled = !appPreferences.telegramNotificationEnabled && !appPreferences.telegramOnClickEnabled
+                                    monitorTelegram = !bothDisabled
+                                    appPreferences.monitorTelegram = monitorTelegram
+                                    appPreferences.telegramNotificationEnabled = monitorTelegram
+                                    appPreferences.telegramOnClickEnabled = monitorTelegram
+                                    Toast.makeText(
+                                        context,
+                                        if (monitorTelegram) "$appToDisable protection enabled" else "$appToDisable protection completely disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                "Messages" -> {
+                                    val bothDisabled = !appPreferences.messagesNotificationEnabled && !appPreferences.messagesOnClickEnabled
+                                    monitorMessages = !bothDisabled
+                                    appPreferences.monitorMessages = monitorMessages
+                                    appPreferences.messagesNotificationEnabled = monitorMessages
+                                    appPreferences.messagesOnClickEnabled = monitorMessages
+                                    Toast.makeText(
+                                        context,
+                                        if (monitorMessages) "$appToDisable protection enabled" else "$appToDisable protection completely disabled",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                            showAppDisableDialog = false
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.textButtonColors(
@@ -594,16 +719,25 @@ fun SettingsScreen(
                             contentColor = DangerRed
                         )
                     ) {
-                        Text("Disable Both")
+                        // Show label depending on current combined state
+                        val bothLabel = when (appToDisable) {
+                            "WhatsApp" -> if (appPreferences.whatsappNotificationEnabled || appPreferences.whatsappOnClickEnabled) "Disable Both" else "Enable Both"
+                            "Instagram" -> if (appPreferences.instagramNotificationEnabled || appPreferences.instagramOnClickEnabled) "Disable Both" else "Enable Both"
+                            "Gmail" -> if (appPreferences.gmailNotificationEnabled || appPreferences.gmailOnClickEnabled) "Disable Both" else "Enable Both"
+                            "Telegram" -> if (appPreferences.telegramNotificationEnabled || appPreferences.telegramOnClickEnabled) "Disable Both" else "Enable Both"
+                            "Messages" -> if (appPreferences.messagesNotificationEnabled || appPreferences.messagesOnClickEnabled) "Disable Both" else "Enable Both"
+                            else -> "Toggle Both"
+                        }
+                        Text(bothLabel)
                     }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showAppDisableDialog = false
-                    appToDisable = ""
-                }) {
-                    Text("Cancel", color = TextSecondary)
+
+                    // Cancel (placed inside the column to avoid overlay issues)
+                    TextButton(onClick = {
+                        showAppDisableDialog = false
+                        appToDisable = ""
+                    }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Cancel", color = TextSecondary)
+                    }
                 }
             },
             containerColor = Color.Transparent,

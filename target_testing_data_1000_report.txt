@@ -6,11 +6,11 @@ Target confusion matrix: TP=570, FN=30, FP=63, TN=337
 Generated totals: phishing=600, legit=400, total=1000
 
 Phishing source selection
-  selected=600 positive=570 safe=30 scanned=3131 exact_100=3
+  selected=600 positive=570 safe=30 scanned=2765 exact_100=2
 Legit source selection
-  selected=400 positive=63 safe=337 scanned=3047 exact_100=0
+  selected=400 positive=63 safe=337 scanned=6701 exact_100=0
 
-Exact 100% unsafe URLs found in selected phishing rows: 3
+Exact 100% unsafe URLs found in selected phishing rows: 2
 Exact 100% unsafe URLs found in selected legit rows: 0
 
 Selected rows are ordered with all phishing URLs first and all safe URLs last.
